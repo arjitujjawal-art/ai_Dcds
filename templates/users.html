@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}User & Database Governance – QueryMind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="role-badge-lg admin-badge-lg" style="margin-bottom:8px;">⚙️ Admin Clearance Level 1</div>
+    <h1>Database &amp; User <span class="gradient-text-red">Governance</span></h1>
+    <p class="hero-sub">Inspect registered credentials, database schemas, and data governance policies.</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('audit') }}" class="btn-outline">
+      🛡️ View Security Audit
+    </a>
+  </div>
+</div>
+
+<!-- Architecture & Governance Status -->
+<div class="admin-system-stats" style="margin-bottom:28px;">
+  <div class="sys-stat"><span class="sys-val sys-green">●</span> Engine: SQLite WAL</div>
+  <div class="sys-stat"><span class="sys-val">{{ stats.users }}</span> Registered Users</div>
+  <div class="sys-stat"><span class="sys-val">{{ stats.students }}</span> Enrolled Students</div>
+  <div class="sys-stat"><span class="sys-val">{{ stats.marks_records }}</span> Academic Marks</div>
+  <div class="sys-stat"><span class="sys-val">{{ stats.total_queries }}</span> Total Queries</div>
+  <div class="sys-stat"><span class="sys-val sys-red">{{ stats.blocked_queries }}</span> Blocked Queries</div>
+</div>
+
+<div class="gov-layout">
+  <!-- Users Table -->
+  <div class="gov-card">
+    <div class="gov-card-header">
+      <h3>👥 System Accounts (app_users)</h3>
+      <span class="gov-badge-green">RBAC Active</span>
+    </div>
+    <div class="table-scroll">
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Access Clearance</th>
+            <th>Password Security</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td><code>#{{ u.user_id }}</code></td>
+            <td style="font-weight:600;">{{ u.username }}</td>
+            <td>
+              <span class="user-role role-{{ u.role }}">{{ u.role }}</span>
+            </td>
+            <td>
+              {% if u.role == 'admin' %}
+                <span class="gov-perm-all">Full System &amp; Audit</span>
+              {% elif u.role == 'teacher' %}
+                <span class="gov-perm-faculty">Academic &amp; Class Analytics</span>
+              {% else %}
+                <span class="gov-perm-student">Read-Only Student Queries</span>
+              {% endif %}
+            </td>
+            <td><code class="hash-tag">SHA-256 Encrypted</code></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Database Schema & Governance Policies -->
+  <div class="gov-card">
+    <div class="gov-card-header">
+      <h3>🛡️ Security &amp; Access Control Policies</h3>
+      <span class="gov-badge-red">Enforced</span>
+    </div>
+    <div class="policy-grid">
+      <div class="policy-item">
+        <div class="policy-icon">🔒</div>
+        <div class="policy-body">
+          <h4>Read-Only Execution</h4>
+          <p>DML/DDL commands (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, <code>ALTER</code>) are permanently rejected by the AST validator.</p>
+        </div>
+      </div>
+      <div class="policy-item">
+        <div class="policy-icon">🛡️</div>
+        <div class="policy-body">
+          <h4>Credential Masking</h4>
+          <p>Columns containing <code>password_hash</code>, <code>token</code>, or <code>secret</code> are strictly blocked from student and faculty output.</p>
+        </div>
+      </div>
+      <div class="policy-item">
+        <div class="policy-icon">📜</div>
+        <div class="policy-body">
+          <h4>Zero-Trust Audit Trail</h4>
+          <p>Every SQL generation attempt, whether successful, malformed, or blocked, is timestamped into the persistent audit store.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

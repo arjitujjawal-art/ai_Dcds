@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Attendance Radar – QueryMind Faculty{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="role-badge-lg teacher-badge-lg" style="margin-bottom:8px;">📚 Faculty Academic Radar</div>
+    <h1>Attendance Defaulters <span class="gradient-text-amber">Radar</span></h1>
+    <p class="hero-sub">Students with cumulative attendance below the required 75% threshold.</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('dashboard') }}" class="btn-outline">
+      ← Back to Class Analytics
+    </a>
+  </div>
+</div>
+
+<div class="defaulter-alert-banner">
+  <div class="alert-icon">⚠️</div>
+  <div class="alert-text">
+    <strong>Mandatory Regulation:</strong> Students with attendance under 75% are ineligible for semester term exams without dean clearance. Total flagged students: <strong>{{ defaulters|length }}</strong>.
+  </div>
+</div>
+
+<div class="gov-card">
+  <div class="gov-card-header">
+    <h3>📋 Flagged Students (&lt; 75% Attendance)</h3>
+    <span class="badge-warning">{{ defaulters|length }} Defaulters</span>
+  </div>
+  <div class="table-scroll">
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>Roll ID</th>
+          <th>Student Name</th>
+          <th>Division</th>
+          <th>Email Address</th>
+          <th>Average Attendance</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in defaulters %}
+        <tr>
+          <td><code>#{{ d.student_id }}</code></td>
+          <td style="font-weight:600;">{{ d.name }}</td>
+          <td><span class="division-pill">Div {{ d.division }}</span></td>
+          <td><a href="mailto:{{ d.email }}" class="email-link">{{ d.email }}</a></td>
+          <td>
+            <div class="att-bar-wrap">
+              <div class="att-bar-fill att-low" style="width: {{ d.avg_attendance }}%;"></div>
+              <span class="att-val text-rose">{{ d.avg_attendance }}%</span>
+            </div>
+          </td>
+          <td><span class="status-pill status-danger">Critical</span></td>
+          <td>
+            <form method="POST" action="{{ url_for('query') }}" style="display:inline;">
+              <input type="hidden" name="question" value="Show all students" />
+              <button type="submit" class="chip-sm">Details</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

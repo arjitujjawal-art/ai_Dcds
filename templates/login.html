@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Login – QueryMind{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-left">
+    <div class="auth-branding">
+      <div class="logo-glow">
+        <span class="logo-icon">⚡</span>
+      </div>
+      <h1 class="brand-title">QueryMind</h1>
+      <p class="brand-tagline">Ask your database anything.<br>In plain English.</p>
+      <div class="feature-pills">
+        <span class="pill">🧠 NLP to SQL</span>
+        <span class="pill">📊 Live Charts</span>
+        <span class="pill">🔒 Secure Access</span>
+        <span class="pill">📜 Audit Trail</span>
+      </div>
+      <div class="demo-queries">
+        <p class="demo-label">Try asking:</p>
+        <div class="demo-bubble">"Show top 5 students by average marks"</div>
+        <div class="demo-bubble">"Which subjects have average score below 60?"</div>
+        <div class="demo-bubble">"Students with attendance below 75%"</div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Welcome back</h2>
+        <p>Sign in to your QueryMind account</p>
+      </div>
+      <form method="POST" action="{{ url_for('login') }}" class="auth-form" id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="password-toggle" onclick="togglePwd()">
+              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="loginBtn">
+          <span>Sign In</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </form>
+      <div class="demo-creds">
+        <p class="demo-creds-title">Demo Credentials</p>
+        <div class="creds-grid">
+          <div class="cred-item" onclick="fillCreds('admin','admin123')">
+            <span class="cred-role admin">Admin</span>
+            <span class="cred-info">admin / admin123</span>
+          </div>
+          <div class="cred-item" onclick="fillCreds('teacher1','teach123')">
+            <span class="cred-role teacher">Teacher</span>
+            <span class="cred-info">teacher1 / teach123</span>
+          </div>
+          <div class="cred-item" onclick="fillCreds('student1','stud123')">
+            <span class="cred-role student">Student</span>
+            <span class="cred-info">student1 / stud123</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePwd() {
+  const inp = document.getElementById('password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+function fillCreds(u, p) {
+  document.getElementById('username').value = u;
+  document.getElementById('password').value = p;
+  document.getElementById('loginBtn').click();
+}
+</script>
+{% endblock %}

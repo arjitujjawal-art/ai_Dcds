@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}QueryMind{% endblock %}</title>
+  <meta name="description" content="QueryMind – Role-Based Intelligent Natural Language to SQL Query System with Database Governance." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body class="portal-{{ session.role or 'guest' }}">
+  {% if session.user_id %}
+  <nav class="navbar navbar-{{ session.role }}">
+    <div class="nav-brand">
+      {% if session.role == 'admin' %}
+        <span class="brand-icon brand-icon-admin">⚙️</span>
+        <div class="brand-titles">
+          <span class="brand-name">QueryMind</span>
+          <span class="portal-tag tag-admin">Admin Governance Portal</span>
+        </div>
+      {% elif session.role == 'teacher' %}
+        <span class="brand-icon brand-icon-teacher">📚</span>
+        <div class="brand-titles">
+          <span class="brand-name">QueryMind</span>
+          <span class="portal-tag tag-teacher">Faculty &amp; Class Analytics</span>
+        </div>
+      {% else %}
+        <span class="brand-icon brand-icon-student">🎓</span>
+        <div class="brand-titles">
+          <span class="brand-name">QueryMind</span>
+          <span class="portal-tag tag-student">Student Academic Portal</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="nav-links">
+      {% if session.role == 'admin' %}
+        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span>⚙️</span> Dashboard
+        </a>
+        <a href="{{ url_for('audit') }}" class="nav-link {% if request.endpoint == 'audit' %}active{% endif %}">
+          <span>🛡️</span> Security &amp; Audit
+        </a>
+        <a href="{{ url_for('users') }}" class="nav-link {% if request.endpoint == 'users' %}active{% endif %}">
+          <span>👥</span> DB Governance
+        </a>
+        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+          <span>📜</span> Enterprise Logs
+        </a>
+        <a href="{{ url_for('export_csv') }}" class="nav-link">
+          <span>📤</span> Export Full Data
+        </a>
+      {% elif session.role == 'teacher' %}
+        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span>📊</span> Class Analytics
+        </a>
+        <a href="{{ url_for('defaulters') }}" class="nav-link {% if request.endpoint == 'defaulters' %}active{% endif %}">
+          <span>⚠️</span> Attendance Radar
+        </a>
+        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+          <span>📜</span> Query History
+        </a>
+        <a href="{{ url_for('export_csv') }}" class="nav-link">
+          <span>📤</span> Export CSV
+        </a>
+      {% else %}
+        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span>🎓</span> Academic Dashboard
+        </a>
+        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+          <span>💬</span> My Questions History
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="nav-user">
+      <div class="user-badge">
+        <span class="user-avatar avatar-{{ session.role }}">{{ session.username[0].upper() }}</span>
+        <div class="user-info">
+          <span class="user-name">{{ session.username }}</span>
+          <span class="user-role role-{{ session.role }}">{{ session.role }}</span>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </nav>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container">
+      {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">
+        {{ msg }}
+        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
