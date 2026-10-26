@@ -417,7 +417,23 @@ def _setup_registry():
         )
     """)
     conn.commit()
+    count = conn.execute("SELECT COUNT(*) FROM dataset_registry").fetchone()[0]
     conn.close()
+
+    if count == 0:
+        sample_df = _pd.DataFrame([
+            {"emp_id": 101, "name": "Aarav Sharma", "department": "Engineering", "salary": 95000, "rating": 4.8, "experience_years": 5, "city": "Mumbai"},
+            {"emp_id": 102, "name": "Priya Patel", "department": "Marketing", "salary": 72000, "rating": 4.5, "experience_years": 4, "city": "Delhi"},
+            {"emp_id": 103, "name": "Rohan Mehta", "department": "Engineering", "salary": 110000, "rating": 4.9, "experience_years": 7, "city": "Bengaluru"},
+            {"emp_id": 104, "name": "Sneha Reddy", "department": "Finance", "salary": 88000, "rating": 4.2, "experience_years": 6, "city": "Hyderabad"},
+            {"emp_id": 105, "name": "Arjun Singh", "department": "Sales", "salary": 65000, "rating": 3.9, "experience_years": 3, "city": "Pune"},
+            {"emp_id": 106, "name": "Kavya Nair", "department": "HR", "salary": 62000, "rating": 4.4, "experience_years": 4, "city": "Chennai"},
+            {"emp_id": 107, "name": "Vikram Gupta", "department": "Engineering", "salary": 125000, "rating": 4.9, "experience_years": 8, "city": "Bengaluru"},
+            {"emp_id": 108, "name": "Meena Iyer", "department": "Marketing", "salary": 78000, "rating": 4.6, "experience_years": 5, "city": "Mumbai"},
+            {"emp_id": 109, "name": "Aditya Joshi", "department": "Finance", "salary": 92000, "rating": 4.3, "experience_years": 5, "city": "Delhi"},
+            {"emp_id": 110, "name": "Pooja Desai", "department": "Sales", "salary": 71000, "rating": 4.1, "experience_years": 3, "city": "Ahmedabad"},
+        ])
+        import_dataframe(sample_df, "company_employees", "Company Employees & Salaries", "system")
 
 
 def _safe_table_name(original: str) -> str:

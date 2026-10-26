@@ -1,66 +1,103 @@
 {% extends "base.html" %}
-{% block title %}User & Database Governance – QueryMind{% endblock %}
+{% block title %}User &amp; Database Governance – QueryMind{% endblock %}
+{% block breadcrumb %}Administrator / User Governance{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <div class="role-badge-lg admin-badge-lg" style="margin-bottom:8px;">⚙️ Admin Clearance Level 1</div>
-    <h1>Database &amp; User <span class="gradient-text-red">Governance</span></h1>
-    <p class="hero-sub">Inspect registered credentials, database schemas, and data governance policies.</p>
-  </div>
-  <div class="header-actions">
-    <a href="{{ url_for('audit') }}" class="btn-outline">
-      🛡️ View Security Audit
-    </a>
-  </div>
-</div>
+<div class="workspace-view">
 
-<!-- Architecture & Governance Status -->
-<div class="admin-system-stats" style="margin-bottom:28px;">
-  <div class="sys-stat"><span class="sys-val sys-green">●</span> Engine: SQLite WAL</div>
-  <div class="sys-stat"><span class="sys-val">{{ stats.users }}</span> Registered Users</div>
-  <div class="sys-stat"><span class="sys-val">{{ stats.students }}</span> Enrolled Students</div>
-  <div class="sys-stat"><span class="sys-val">{{ stats.marks_records }}</span> Academic Marks</div>
-  <div class="sys-stat"><span class="sys-val">{{ stats.total_queries }}</span> Total Queries</div>
-  <div class="sys-stat"><span class="sys-val sys-red">{{ stats.blocked_queries }}</span> Blocked Queries</div>
-</div>
-
-<div class="gov-layout">
-  <!-- Users Table -->
-  <div class="gov-card">
-    <div class="gov-card-header">
-      <h3>👥 System Accounts (app_users)</h3>
-      <span class="gov-badge-green">RBAC Active</span>
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-admin);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-admin">
+        User Accounts &amp; RBAC Directory
+      </div>
+      <h1>User &amp; Database <span style="color:var(--role-admin);">Governance</span></h1>
+      <p class="hero-sub">Directory of authorized user roles, database clearance scopes, and read-only schema masking rules.</p>
     </div>
-    <div class="table-scroll">
-      <table class="result-table">
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Security Protocol</span>
+      <span class="role-badge-lg badge-student" style="margin-top:4px;">RBAC &amp; Least Privilege Active</span>
+    </div>
+  </div>
+
+  <!-- Operational KPIs -->
+  <div class="admin-kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Registered Accounts</span>
+        <span class="kpi-number">{{ stats.users }} Accounts</span>
+        <span class="kpi-sub">Roles: Admin, Teacher, Student</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">🎓</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Enrolled Students</span>
+        <span class="kpi-number">{{ stats.students }} Students</span>
+        <span class="kpi-sub">Academic database records</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">📝</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Academic Marks</span>
+        <span class="kpi-number">{{ stats.marks_records }} Records</span>
+        <span class="kpi-sub">Evaluated coursework</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--status-success);">🛡️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Data Protection</span>
+        <span class="kpi-number">Masked Hashes</span>
+        <span class="kpi-sub">Credentials Protected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="gov-card" style="margin-bottom: 24px;">
+    <div class="gov-card-header">
+      <h3>System Accounts (`app_users`)</h3>
+      <span class="nav-meta-badge">{{ users|length if users else 0 }} Accounts</span>
+    </div>
+    <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+      <table class="data-table">
         <thead>
           <tr>
             <th>User ID</th>
             <th>Username</th>
             <th>Role</th>
             <th>Access Clearance</th>
-            <th>Password Security</th>
+            <th>Security Status</th>
           </tr>
         </thead>
         <tbody>
           {% for u in users %}
           <tr>
-            <td><code>#{{ u.user_id }}</code></td>
+            <td style="font-family:var(--font-mono);">#00{{ u.user_id }}</td>
             <td style="font-weight:600;">{{ u.username }}</td>
             <td>
-              <span class="user-role role-{{ u.role }}">{{ u.role }}</span>
+              <span class="nav-meta-badge badge-{{ u.role }}">
+                {{ u.role|title }}
+              </span>
             </td>
             <td>
               {% if u.role == 'admin' %}
-                <span class="gov-perm-all">Full System &amp; Audit</span>
+                <span style="font-size:12px; color:var(--status-danger); font-weight:600;">System Administrator (Full Oversight)</span>
               {% elif u.role == 'teacher' %}
-                <span class="gov-perm-faculty">Academic &amp; Class Analytics</span>
+                <span style="font-size:12px; color:var(--role-faculty); font-weight:600;">Faculty (Academic Analytics &amp; Radar)</span>
               {% else %}
-                <span class="gov-perm-student">Read-Only Student Queries</span>
+                <span style="font-size:12px; color:var(--role-student); font-weight:600;">Student (Read-Only Academic Inquiries)</span>
               {% endif %}
             </td>
-            <td><code class="hash-tag">SHA-256 Encrypted</code></td>
+            <td style="font-size:12px; color:var(--text-secondary); font-family:var(--font-mono);">
+              SHA-256 (Protected)
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -68,35 +105,13 @@
     </div>
   </div>
 
-  <!-- Database Schema & Governance Policies -->
-  <div class="gov-card">
-    <div class="gov-card-header">
-      <h3>🛡️ Security &amp; Access Control Policies</h3>
-      <span class="gov-badge-red">Enforced</span>
-    </div>
-    <div class="policy-grid">
-      <div class="policy-item">
-        <div class="policy-icon">🔒</div>
-        <div class="policy-body">
-          <h4>Read-Only Execution</h4>
-          <p>DML/DDL commands (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, <code>ALTER</code>) are permanently rejected by the AST validator.</p>
-        </div>
-      </div>
-      <div class="policy-item">
-        <div class="policy-icon">🛡️</div>
-        <div class="policy-body">
-          <h4>Credential Masking</h4>
-          <p>Columns containing <code>password_hash</code>, <code>token</code>, or <code>secret</code> are strictly blocked from student and faculty output.</p>
-        </div>
-      </div>
-      <div class="policy-item">
-        <div class="policy-icon">📜</div>
-        <div class="policy-body">
-          <h4>Zero-Trust Audit Trail</h4>
-          <p>Every SQL generation attempt, whether successful, malformed, or blocked, is timestamped into the persistent audit store.</p>
-        </div>
-      </div>
+  <!-- Data Protection Notice -->
+  <div class="flash-alert flash-info">
+    <div class="flash-icon">ℹ</div>
+    <div class="flash-msg">
+      <strong>Zero-Trust Architectural Governance:</strong> QueryMind automatically strips password hashes, blocks raw DDL statements (`DROP`, `ALTER`, `TRUNCATE`), and forces `LIMIT 25` on unconstrained SELECT queries.
     </div>
   </div>
+
 </div>
 {% endblock %}

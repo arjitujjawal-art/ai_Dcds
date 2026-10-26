@@ -87,11 +87,13 @@ User Question (Plain English)
 
 ## 🛡️ Security & Governance
 
-- **Read-Only Enforcement**: Rejects `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `EXEC`.
-- **AST Parsing**: Validates SQL structure using `sqlglot` with fallback tokenizer checks.
+- **Zero-Cost Voice Ingress**: Real-time microphone capture via streaming speech-to-text with pulsating visual feedback in Chrome, Edge, and Safari.
+- **Tabular-to-Verbal Synthesis**: Executive spoken summaries distilled from query results via asynchronous neural audio streaming (`edge-tts`) and client-side Speech Synthesis.
+- **Deterministic AST Governance**: In-memory Abstract Syntax Tree validation via `sqlglot` verifying single `SELECT` statement structure and enforcing role-based table/column allowlists.
+- **Dynamic Safe Ceilings**: Automatic injection of default `LIMIT` clauses into unbounded AST queries to prevent resource-depletion denial of service.
 - **Role-Based Access Control**: Sensitive tables like `app_users` are restricted to Admin clearance.
 - **Sensitive Column Masking**: Columns containing `password_hash`, `secret`, or `token` are blocked from student and faculty output.
-- **Audit Logging**: Every authentication event, query execution, and blocked attempt is recorded with timestamps and execution metadata.
+- **Immutable Audit Telemetry**: Every query records `raw_intent`, `executed_sql` or `rejected_sql`, `disposition` (`AUTHORIZED` / `DENIED`), `execution_ms`, and `verbal_summary`.
 
 ---
 

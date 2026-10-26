@@ -27,6 +27,34 @@
     <span class="q-text">{{ question }}</span>
   </div>
 
+  <!-- Verbal Executive Summary (Zero-Cost Neural Audio & Narrative) -->
+  {% if verbal_summary %}
+  <div class="voice-summary-card {% if error %}voice-error{% endif %}">
+    <div class="voice-card-header">
+      <div class="voice-card-title">
+        <span class="voice-pulse-icon">🎙️</span>
+        <h3>Verbal Executive Brief</h3>
+        <span class="voice-badge">{% if error %}Security Alert{% else %}Zero-Cost Neural Voice{% endif %}</span>
+      </div>
+      <div class="voice-controls">
+        <button id="voicePlayBtn" class="btn-voice-play" onclick="toggleSpeechPlayback()">
+          <span id="playIconText">▶ Play Spoken Brief</span>
+          <div id="playWaveAnim" class="voice-wave-bars" style="display:none;">
+            <span></span><span></span><span></span>
+          </div>
+        </button>
+        <button id="voiceStopBtn" class="btn-voice-stop" onclick="stopSpeechPlayback()" style="display:none;">
+          <span>⏹ Stop</span>
+        </button>
+      </div>
+    </div>
+    <div class="voice-summary-body">
+      <p id="verbalSummaryText" class="verbal-text">{{ verbal_summary }}</p>
+    </div>
+    <audio id="ttsAudioPlayer" style="display:none;" preload="none"></audio>
+  </div>
+  {% endif %}
+
 
   {% if error %}
   <!-- Error Card -->
@@ -221,6 +249,94 @@ function sendFeedback(rating) {
     document.getElementById('fb-not').disabled = true;
     document.getElementById('fb-done').style.display = 'block';
   });
+}
+
+// ── Zero-Cost Verbal Audio Streaming ──────────────────────────────────────────
+let audioPlaying = false;
+const audioPlayer = document.getElementById('ttsAudioPlayer');
+const summaryText = {{ (verbal_summary or '') | tojson }};
+const isSecurityError = {{ (true if error else false) | tojson }};
+
+function toggleSpeechPlayback() {
+  if (audioPlaying) {
+    stopSpeechPlayback();
+  } else {
+    playSpeechPlayback();
+  }
+}
+
+function playSpeechPlayback() {
+  if (!summaryText) return;
+
+  const playBtn = document.getElementById('voicePlayBtn');
+  const stopBtn = document.getElementById('voiceStopBtn');
+  const iconText = document.getElementById('playIconText');
+  const waveAnim = document.getElementById('playWaveAnim');
+
+  // Try edge-tts neural server stream first
+  const voice = isSecurityError ? 'en-US-AriaNeural' : 'en-US-ChristopherNeural';
+  const ttsUrl = '/api/tts?voice=' + encodeURIComponent(voice) + '&text=' + encodeURIComponent(summaryText);
+
+  if (audioPlayer) {
+    audioPlayer.src = ttsUrl;
+    audioPlayer.play().then(() => {
+      audioPlaying = true;
+      if (iconText) iconText.textContent = '⏸ Pause Voice';
+      if (waveAnim) waveAnim.style.display = 'inline-flex';
+      if (stopBtn) stopBtn.style.display = 'inline-flex';
+    }).catch((err) => {
+      console.warn("Server-side edge-tts audio element failed, falling back to Web Speech API:", err);
+      // Instant fallback to client-side browser speech synthesis!
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(summaryText);
+        utterance.rate = 1.0;
+        utterance.pitch = isSecurityError ? 1.05 : 0.98;
+        utterance.onstart = () => {
+          audioPlaying = true;
+          if (iconText) iconText.textContent = '⏸ Pause Voice';
+          if (waveAnim) waveAnim.style.display = 'inline-flex';
+          if (stopBtn) stopBtn.style.display = 'inline-flex';
+        };
+        utterance.onend = () => {
+          stopSpeechPlayback();
+        };
+        utterance.onerror = () => {
+          stopSpeechPlayback();
+        };
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+
+    audioPlayer.onended = () => {
+      stopSpeechPlayback();
+    };
+    audioPlayer.onerror = () => {
+      if ('speechSynthesis' in window && !audioPlaying) {
+        const utterance = new SpeechSynthesisUtterance(summaryText);
+        window.speechSynthesis.speak(utterance);
+      }
+      stopSpeechPlayback();
+    };
+  }
+}
+
+function stopSpeechPlayback() {
+  audioPlaying = false;
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  const iconText = document.getElementById('playIconText');
+  const waveAnim = document.getElementById('playWaveAnim');
+  const stopBtn = document.getElementById('voiceStopBtn');
+
+  if (iconText) iconText.textContent = '▶ Play Spoken Brief';
+  if (waveAnim) waveAnim.style.display = 'none';
+  if (stopBtn) stopBtn.style.display = 'none';
 }
 </script>
 {% endblock %}

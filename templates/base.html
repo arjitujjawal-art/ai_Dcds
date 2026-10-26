@@ -3,121 +3,366 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}QueryMind{% endblock %}</title>
-  <meta name="description" content="QueryMind – Role-Based Intelligent Natural Language to SQL Query System with Database Governance." />
+  <title>{% block title %}QueryMind – Academic Intelligence Workspace{% endblock %}</title>
+  <meta name="description" content="QueryMind — Natural-Language and Voice-Enabled Academic Data Intelligence Platform with Deterministic SQL Governance." />
+  
+  <!-- Modern Typography: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   {% block head %}{% endblock %}
 </head>
-<body class="portal-{{ session.role or 'guest' }}">
-  {% if session.user_id %}
-  <nav class="navbar navbar-{{ session.role }}">
-    <div class="nav-brand">
-      {% if session.role == 'admin' %}
-        <span class="brand-icon brand-icon-admin">⚙️</span>
-        <div class="brand-titles">
-          <span class="brand-name">QueryMind</span>
-          <span class="portal-tag tag-admin">Admin Governance Portal</span>
-        </div>
-      {% elif session.role == 'teacher' %}
-        <span class="brand-icon brand-icon-teacher">📚</span>
-        <div class="brand-titles">
-          <span class="brand-name">QueryMind</span>
-          <span class="portal-tag tag-teacher">Faculty &amp; Class Analytics</span>
-        </div>
-      {% else %}
-        <span class="brand-icon brand-icon-student">🎓</span>
-        <div class="brand-titles">
-          <span class="brand-name">QueryMind</span>
-          <span class="portal-tag tag-student">Student Academic Portal</span>
-        </div>
-      {% endif %}
-    </div>
+<body class="app-shell role-{{ current_role }}">
 
-    <div class="nav-links">
-      {% if session.role == 'admin' %}
-        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-          <span>⚙️</span> Dashboard
-        </a>
-        <a href="{{ url_for('datasets') }}" class="nav-link {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
-          <span>📁</span> Datasets
-        </a>
-        <a href="{{ url_for('dataset_upload') }}" class="nav-link {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
-          <span>📥</span> Upload Dataset
-        </a>
-        <a href="{{ url_for('audit') }}" class="nav-link {% if request.endpoint == 'audit' %}active{% endif %}">
-          <span>🛡️</span> Security &amp; Audit
-        </a>
-        <a href="{{ url_for('users') }}" class="nav-link {% if request.endpoint == 'users' %}active{% endif %}">
-          <span>👥</span> DB Governance
-        </a>
-        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
-          <span>📜</span> Enterprise Logs
-        </a>
-        <a href="{{ url_for('export_csv') }}" class="nav-link">
-          <span>📤</span> Export Full Data
-        </a>
-      {% elif session.role == 'teacher' %}
-        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-          <span>📊</span> Class Analytics
-        </a>
-        <a href="{{ url_for('datasets') }}" class="nav-link {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
-          <span>📁</span> Datasets
-        </a>
-        <a href="{{ url_for('dataset_upload') }}" class="nav-link {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
-          <span>📥</span> Upload Dataset
-        </a>
-        <a href="{{ url_for('defaulters') }}" class="nav-link {% if request.endpoint == 'defaulters' %}active{% endif %}">
-          <span>⚠️</span> Attendance Radar
-        </a>
-        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
-          <span>📜</span> Query History
-        </a>
-        <a href="{{ url_for('export_csv') }}" class="nav-link">
-          <span>📤</span> Export CSV
-        </a>
-      {% else %}
-        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-          <span>🎓</span> Academic Dashboard
-        </a>
-        <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
-          <span>💬</span> My Questions History
-        </a>
-      {% endif %}
-    </div>
-
-    <div class="nav-user">
-      <div class="user-badge">
-        <span class="user-avatar avatar-{{ session.role }}">{{ session.username[0].upper() }}</span>
-        <div class="user-info">
-          <span class="user-name">{{ session.username }}</span>
-          <span class="user-role role-{{ session.role }}">{{ session.role }}</span>
+  <!-- ═══════════════════════════════════════════════════════════
+       248px Architectural Charcoal Navigation Rail
+       ═══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar-rail">
+    <!-- Brand Header -->
+    <div class="sidebar-brand">
+      <a href="{{ url_for('portal1') }}" class="brand-link">
+        <div class="brand-logo-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
         </div>
-      </div>
-      <a href="{{ url_for('logout') }}" class="btn-logout" title="Sign Out">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <div class="brand-text-block">
+          <span class="brand-title">QueryMind</span>
+          <span class="brand-tagline">Academic Intelligence</span>
+        </div>
       </a>
     </div>
-  </nav>
-  {% endif %}
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-container">
-      {% for cat, msg in messages %}
-      <div class="flash flash-{{ cat }}">
-        {{ msg }}
-        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+    <!-- Interactive Role Perspective Switcher -->
+    <div class="role-perspective-box">
+      <div class="rpb-header">
+        <span class="rpb-label">Perspective</span>
+        <span class="rpb-role-badge badge-{{ current_role }}">{{ current_role|upper }}</span>
       </div>
-      {% endfor %}
+      <div class="role-pills">
+        <a href="{{ url_for('switch_role', target_role='student') }}" 
+           class="role-pill {% if current_role == 'student' %}active{% endif %}" title="Switch to Student Perspective (Aarav Sharma)">
+          Student
+        </a>
+        <a href="{{ url_for('switch_role', target_role='teacher') }}" 
+           class="role-pill {% if current_role in ('teacher', 'faculty') %}active{% endif %}" title="Switch to Faculty Perspective (Prof. Sharma)">
+          Faculty
+        </a>
+        <a href="{{ url_for('switch_role', target_role='admin') }}" 
+           class="role-pill {% if current_role == 'admin' %}active{% endif %}" title="Switch to Administrator Governance">
+          Admin
+        </a>
+      </div>
     </div>
-    {% endif %}
-  {% endwith %}
 
-  <main class="main-content">
-    {% block content %}{% endblock %}
-  </main>
+    <!-- Navigation Tree -->
+    <nav class="sidebar-nav">
+      
+      <!-- Section: Core Intelligence Portals -->
+      <div class="nav-group-header">Core Intelligence</div>
+      <a href="{{ url_for('portal1') }}" class="nav-item {% if request.endpoint in ('portal1', 'index') %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Dataset Studio</span>
+        <span class="nav-meta-badge">Portal 1</span>
+      </a>
+
+      <a href="{{ url_for('portal2') }}" class="nav-item {% if request.endpoint in ('portal2', 'portal2_ask') %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </span>
+        <span class="nav-label">Query Studio</span>
+        <span class="nav-meta-badge voice-pulse">Voice</span>
+      </a>
+
+      <!-- Section: Academic & Operations -->
+      <div class="nav-group-header">Academic Workspace</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9"></rect>
+            <rect x="14" y="3" width="7" height="5"></rect>
+            <rect x="14" y="12" width="7" height="9"></rect>
+            <rect x="3" y="16" width="7" height="5"></rect>
+          </svg>
+        </span>
+        <span class="nav-label">
+          {% if current_role == 'student' %}Academic Overview
+          {% elif current_role in ('teacher', 'faculty') %}Class Analytics
+          {% else %}System Overview{% endif %}
+        </span>
+      </a>
+
+      <a href="{{ url_for('datasets') }}" class="nav-item {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Dataset Library</span>
+        {% if global_datasets %}
+        <span class="nav-count">{{ global_datasets|length }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{{ url_for('dataset_upload') }}" class="nav-item {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </span>
+        <span class="nav-label">Upload Dataset</span>
+      </a>
+
+      {% if current_role in ('admin', 'teacher') %}
+      <a href="{{ url_for('defaulters') }}" class="nav-item {% if request.endpoint == 'defaulters' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </span>
+        <span class="nav-label">Attendance Radar</span>
+      </a>
+      {% endif %}
+
+      {% if current_role == 'admin' %}
+      <div class="nav-group-header">Governance &amp; Trust</div>
+      <a href="{{ url_for('audit') }}" class="nav-item {% if request.endpoint == 'audit' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Security &amp; Audit</span>
+      </a>
+
+      <a href="{{ url_for('users') }}" class="nav-item {% if request.endpoint == 'users' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </span>
+        <span class="nav-label">User Governance</span>
+      </a>
+      {% endif %}
+
+      <div class="nav-group-header">Telemetry</div>
+      <a href="{{ url_for('history') }}" class="nav-item {% if request.endpoint == 'history' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </span>
+        <span class="nav-label">Query History</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Bottom User Profile -->
+    <div class="sidebar-footer">
+      <div class="user-profile-strip">
+        <div class="user-avatar avatar-{{ current_role }}">
+          {{ current_username[0]|upper }}
+        </div>
+        <div class="user-info">
+          <span class="user-name">{{ current_username }}</span>
+          <span class="user-role-text">{{ current_role|title }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn-logout" title="Log out">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Main Canvas & 64px Top Workspace Bar
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="app-main-layout">
+    
+    <!-- Top Workspace Bar -->
+    <header class="workspace-topbar">
+      <div class="topbar-left">
+        <button type="button" class="mobile-drawer-btn" onclick="toggleMobileSidebar()" aria-label="Toggle navigation drawer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <nav class="breadcrumb-trail" aria-label="Breadcrumb">
+          <span class="bc-root">QueryMind</span>
+          <span class="bc-sep">/</span>
+          <span class="bc-current">
+            {% block breadcrumb %}
+              {% if request.endpoint in ('portal1', 'index') %}Dataset Studio
+              {% elif request.endpoint in ('portal2', 'portal2_ask') %}Query Studio
+              {% elif request.endpoint == 'dashboard' %}{{ current_role|title }} Overview
+              {% elif request.endpoint == 'datasets' %}Datasets Library
+              {% elif request.endpoint == 'history' %}Query History
+              {% elif request.endpoint == 'audit' %}Security &amp; Audit
+              {% elif request.endpoint == 'users' %}User Governance
+              {% elif request.endpoint == 'defaulters' %}Attendance Radar
+              {% else %}Workspace{% endif %}
+            {% endblock %}
+          </span>
+        </nav>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Command Palette Trigger -->
+        <button type="button" class="command-palette-trigger" onclick="openCommandPalette()">
+          <span class="cpt-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <span class="cpt-text">Search queries or jump to…</span>
+          <span class="cpt-shortcut"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+        </button>
+
+        <!-- Active Dataset Pill -->
+        {% if active_dataset_name %}
+        <div class="dataset-pill" title="Currently active dataset table">
+          <span class="dsp-dot"></span>
+          <span class="dsp-name">{{ active_dataset_name }}</span>
+        </div>
+        {% elif global_datasets and global_datasets|length > 0 %}
+        <div class="dataset-pill" title="Loaded datasets">
+          <span class="dsp-dot"></span>
+          <span class="dsp-name">{{ global_datasets[0].display_name }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Role Badge -->
+        <span class="topbar-role-badge badge-{{ current_role }}">
+          {{ current_role|upper }}
+        </span>
+      </div>
+    </header>
+
+    <!-- Flash Notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-alert-container">
+        {% for cat, msg in messages %}
+        <div class="flash-alert flash-{{ cat }}">
+          <div class="flash-icon">
+            {% if cat == 'success' %}✓{% elif cat == 'danger' %}✕{% else %}ℹ{% endif %}
+          </div>
+          <div class="flash-msg">{{ msg }}</div>
+          <button class="flash-close-btn" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Main Dynamic Content Canvas -->
+    <main class="content-canvas">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Command Palette Modal (Ctrl+K / Cmd+K)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="command-palette-overlay" id="commandPalette" style="display:none;" onclick="if(event.target === this) closeCommandPalette()">
+    <div class="command-palette-dialog">
+      <div class="cp-search-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="cpSearchInput" placeholder="Type a question, command, or jump to screen..." oninput="filterCommandPalette(this.value)" autocomplete="off" />
+        <span class="cp-esc-hint" onclick="closeCommandPalette()"><kbd>ESC</kbd></span>
+      </div>
+
+      <div class="cp-results-list" id="cpResultsList">
+        <div class="cp-group-title">Primary Portals</div>
+        <a href="{{ url_for('portal1') }}" class="cp-item">
+          <span class="cp-item-icon">📁</span>
+          <div class="cp-item-text">
+            <strong>Portal 1: Dataset Studio</strong>
+            <span>Upload CSV/Excel, schema audit, missing data analysis</span>
+          </div>
+          <span class="cp-shortcut">1</span>
+        </a>
+        <a href="{{ url_for('portal2') }}" class="cp-item">
+          <span class="cp-item-icon">🎙️</span>
+          <div class="cp-item-text">
+            <strong>Portal 2: Query Studio</strong>
+            <span>Ask questions in natural language, voice dictation, SQL execution</span>
+          </div>
+          <span class="cp-shortcut">2</span>
+        </a>
+
+        <div class="cp-group-title">Recommended Academic Queries</div>
+        <a href="{{ url_for('portal2') }}?q=Show+top+5+students+by+average+marks" class="cp-item">
+          <span class="cp-item-icon">⚡</span>
+          <div class="cp-item-text">
+            <strong>"Show top 5 students by average marks"</strong>
+            <span>Academic Performance ranking</span>
+          </div>
+        </a>
+        <a href="{{ url_for('portal2') }}?q=Average+attendance+of+each+division" class="cp-item">
+          <span class="cp-item-icon">⚡</span>
+          <div class="cp-item-text">
+            <strong>"Average attendance of each division"</strong>
+            <span>Division-wise attendance distribution</span>
+          </div>
+        </a>
+        <a href="{{ url_for('portal2') }}?q=Show+all+subjects" class="cp-item">
+          <span class="cp-item-icon">⚡</span>
+          <div class="cp-item-text">
+            <strong>"Show all subjects"</strong>
+            <span>Course curriculum and credits breakdown</span>
+          </div>
+        </a>
+
+        <div class="cp-group-title">Switch Perspective</div>
+        <a href="{{ url_for('switch_role', target_role='student') }}" class="cp-item">
+          <span class="cp-item-icon">🎓</span>
+          <div class="cp-item-text"><strong>Student Perspective</strong> (Aarav Sharma)</div>
+        </a>
+        <a href="{{ url_for('switch_role', target_role='teacher') }}" class="cp-item">
+          <span class="cp-item-icon">👨‍🏫</span>
+          <div class="cp-item-text"><strong>Faculty Perspective</strong> (Prof. Sharma)</div>
+        </a>
+        <a href="{{ url_for('switch_role', target_role='admin') }}" class="cp-item">
+          <span class="cp-item-icon">⚙️</span>
+          <div class="cp-item-text"><strong>Administrator Perspective</strong> (Enterprise Governance)</div>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   {% block scripts %}{% endblock %}

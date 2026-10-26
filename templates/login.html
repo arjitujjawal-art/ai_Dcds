@@ -1,88 +1,126 @@
 {% extends "base.html" %}
-{% block title %}Login – QueryMind{% endblock %}
+{% block title %}Sign In – QueryMind Academic Intelligence{% endblock %}
+{% block breadcrumb %}Authentication / Sign In{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-  <div class="auth-left">
-    <div class="auth-branding">
-      <div class="logo-glow">
-        <span class="logo-icon">⚡</span>
+<div class="workspace-view" style="max-width:1040px; margin: 40px auto;">
+
+  <div class="twelve-col-grid" style="background:var(--surface-primary); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-card);">
+    
+    <!-- Left Column: Editorial Product Showcase (6 Cols) -->
+    <div class="col-span-6" style="background:#111318; padding:48px 40px; display:flex; flex-direction:column; justify-content:space-between; color:#FFFFFF;">
+      <div>
+        <!-- Brand Mark -->
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:36px;">
+          <div style="width:36px; height:36px; background:#3658D4; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(54,88,212,0.4);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+          <div>
+            <span style="font-size:16px; font-weight:700; letter-spacing:-0.01em; display:block;">QueryMind</span>
+            <span style="font-size:11px; color:#858D99;">Academic Intelligence</span>
+          </div>
+        </div>
+
+        <h1 style="font-size:28px; font-weight:700; line-height:1.2; letter-spacing:-0.02em; margin-bottom:12px;">
+          Better questions.<br><span style="color:#7B95F5;">Clearer answers.</span>
+        </h1>
+        <p style="font-size:14px; color:#9DA4B0; line-height:1.5; margin-bottom:32px;">
+          Translate plain-English and Hindi inquiries into governed SQL queries, analyze academic distributions, and listen to synthesized verbal briefs.
+        </p>
+
+        <!-- Compact Visual Flow Preview -->
+        <div style="background:#171A21; border:1px solid #242832; border-radius:8px; padding:16px; margin-bottom:24px;">
+          <div style="font-size:11px; text-transform:uppercase; color:#616875; font-weight:600; margin-bottom:8px;">Transformation Pipeline</div>
+          <div style="font-size:13px; color:#FFFFFF; margin-bottom:8px; font-weight:500;">
+            💬 "Show top 5 students by average marks"
+          </div>
+          <div style="font-family:var(--font-mono); font-size:11px; color:#7B95F5; background:#0F1117; padding:8px 10px; border-radius:4px; margin-bottom:8px;">
+            SELECT name, division, AVG(marks) FROM students... LIMIT 5;
+          </div>
+          <div style="font-size:11px; color:#34D399; font-weight:600;">
+            ✓ 5 rows returned · AST Verified
+          </div>
+        </div>
       </div>
-      <h1 class="brand-title">QueryMind</h1>
-      <p class="brand-tagline">Ask your database anything.<br>In plain English.</p>
-      <div class="feature-pills">
-        <span class="pill">🧠 NLP to SQL</span>
-        <span class="pill">📊 Live Charts</span>
-        <span class="pill">🔒 Secure Access</span>
-        <span class="pill">📜 Audit Trail</span>
-      </div>
-      <div class="demo-queries">
-        <p class="demo-label">Try asking:</p>
-        <div class="demo-bubble">"Show top 5 students by average marks"</div>
-        <div class="demo-bubble">"Which subjects have average score below 60?"</div>
-        <div class="demo-bubble">"Students with attendance below 75%"</div>
+
+      <!-- Trusted Labels -->
+      <div style="display:flex; gap:16px; font-size:11px; color:#616875; border-top:1px solid #1E222B; padding-top:16px;">
+        <span>Read-Only SELECT</span>
+        <span>•</span>
+        <span>AST Governance</span>
+        <span>•</span>
+        <span>Neural Audio</span>
       </div>
     </div>
-  </div>
-  <div class="auth-right">
-    <div class="auth-card">
-      <div class="auth-header">
-        <h2>Welcome back</h2>
-        <p>Sign in to your QueryMind account</p>
+
+    <!-- Right Column: Authentication Card (6 Cols) -->
+    <div class="col-span-6" style="padding:48px 40px; display:flex; flex-direction:column; justify-content:center;">
+      <div style="margin-bottom:24px;">
+        <h2 style="font-size:22px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Welcome back</h2>
+        <p style="font-size:13px; color:var(--text-secondary);">Sign in to your QueryMind academic account</p>
       </div>
-      <form method="POST" action="{{ url_for('login') }}" class="auth-form" id="loginForm">
-        <div class="form-group">
-          <label for="username">Username</label>
-          <div class="input-wrapper">
-            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
+
+      <form method="POST" action="{{ url_for('login') }}" id="loginForm" style="display:flex; flex-direction:column; gap:16px;">
+        <div>
+          <label for="username" style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Username</label>
+          <input type="text" id="username" name="username" placeholder="e.g. admin, aarav, prof_sharma" required autocomplete="username"
+                 style="width:100%; font-size:14px; padding:8px 12px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); outline:none;" />
+        </div>
+
+        <div>
+          <label for="password" style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Password</label>
+          <div style="position:relative;">
+            <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password"
+                   style="width:100%; font-size:14px; padding:8px 40px 8px 12px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); outline:none;" />
+            <button type="button" onclick="togglePwdVisibility()" style="position:absolute; right:10px; top:8px; color:var(--text-muted); font-size:12px;">👁</button>
           </div>
         </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <div class="input-wrapper">
-            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
-            <button type="button" class="password-toggle" onclick="togglePwd()">
-              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        <button type="submit" class="btn-primary btn-full" id="loginBtn">
-          <span>Sign In</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+
+        <button type="submit" class="btn-query" style="width:100%; justify-content:center; padding:10px; margin-top:8px;">
+          <span>Sign In to QueryMind</span>
         </button>
       </form>
-      <div class="demo-creds">
-        <p class="demo-creds-title">Demo Credentials</p>
-        <div class="creds-grid">
-          <div class="cred-item" onclick="fillCreds('admin','admin123')">
-            <span class="cred-role admin">Admin</span>
-            <span class="cred-info">admin / admin123</span>
-          </div>
-          <div class="cred-item" onclick="fillCreds('teacher1','teach123')">
-            <span class="cred-role teacher">Teacher</span>
-            <span class="cred-info">teacher1 / teach123</span>
-          </div>
-          <div class="cred-item" onclick="fillCreds('student1','stud123')">
-            <span class="cred-role student">Student</span>
-            <span class="cred-info">student1 / stud123</span>
-          </div>
+
+      <!-- Demo Role Selectors -->
+      <div style="margin-top:32px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+        <span style="display:block; font-size:11px; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:10px;">
+          One-Click Demo Roles
+        </span>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <button type="button" class="chip" onclick="fillAndSubmit('admin', 'admin123')" style="text-align:center; padding:8px 6px;">
+            <strong style="display:block; font-size:12px; color:var(--role-admin);">Admin</strong>
+            <span style="font-size:10px; color:var(--text-muted);">Governance</span>
+          </button>
+          <button type="button" class="chip" onclick="fillAndSubmit('prof_sharma', 'prof123')" style="text-align:center; padding:8px 6px;">
+            <strong style="display:block; font-size:12px; color:var(--role-faculty);">Faculty</strong>
+            <span style="font-size:10px; color:var(--text-muted);">Class Analytics</span>
+          </button>
+          <button type="button" class="chip" onclick="fillAndSubmit('aarav', 'aarav123')" style="text-align:center; padding:8px 6px;">
+            <strong style="display:block; font-size:12px; color:var(--role-student);">Student</strong>
+            <span style="font-size:10px; color:var(--text-muted);">Aarav Sharma</span>
+          </button>
         </div>
       </div>
     </div>
+
   </div>
+
 </div>
 
 <script>
-function togglePwd() {
-  const inp = document.getElementById('password');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+function togglePwdVisibility() {
+  const p = document.getElementById('password');
+  p.type = (p.type === 'password') ? 'text' : 'password';
 }
-function fillCreds(u, p) {
-  document.getElementById('username').value = u;
-  document.getElementById('password').value = p;
-  document.getElementById('loginBtn').click();
+
+function fillAndSubmit(user, pass) {
+  document.getElementById('username').value = user;
+  document.getElementById('password').value = pass;
+  document.getElementById('loginForm').submit();
 }
 </script>
 {% endblock %}

@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+{% block title %}Query Studio – Natural Language &amp; Voice Intelligence – QueryMind{% endblock %}
+{% block breadcrumb %}Query Studio{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-view query-studio-workspace">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ZONE 1: QUESTION COMPOSER
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="role-hero" style="border-left: 4px solid var(--accent-primary); margin-bottom: 20px;">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-student">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+        Query Studio · Natural Language to Governed SQL
+      </div>
+      <h1>Natural Language &amp; <span style="color: var(--accent-primary);">Voice Query Studio</span></h1>
+      <p class="hero-sub">Speak or type questions in plain English or Hindi. QueryMind automatically validates your intent against deterministic AST policies, generates governed SQL, and verbalizes analytical findings.</p>
+    </div>
+
+    <!-- Active Target Dataset Indicator & Switcher -->
+    {% if all_datasets and all_datasets|length > 0 %}
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Target Dataset</span>
+      <div class="switcher-chips">
+        {% for ds in all_datasets %}
+        <a href="{{ url_for('portal2', table=ds.table_name) }}" 
+           class="switcher-chip {% if active_table == ds.table_name %}active{% endif %}">
+          {{ ds.display_name }} ({{ ds.row_count }} rows)
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Primary Question Composer Card -->
+  <div class="query-card composer-card" style="margin-bottom: 24px;">
+    <div class="card-label" style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Question Composer
+      </span>
+      <span style="font-size:12px; color:var(--text-secondary);">
+        Target: <strong style="color:var(--text-primary); font-family:var(--font-mono);">{{ active_dataset.display_name if active_dataset else active_table }}</strong>
+      </span>
+    </div>
+
+    <form method="POST" action="{{ url_for('portal2_ask') }}" id="queryForm">
+      <input type="hidden" name="table_name" value="{{ active_table }}" />
+      
+      <div class="query-input-group">
+        <div class="query-input-wrapper" id="composerInputWrapper">
+          <span class="query-prefix">💬</span>
+          <input type="text" name="question" id="questionInput" class="query-input"
+            value="{{ question if question else '' }}"
+            placeholder="Ask anything: e.g. Show top 5 students by average marks, Average nikalna hai, Count by division…" 
+            autocomplete="off" required />
+          
+          <!-- Clear Button -->
+          {% if question %}
+          <button type="button" class="btn-clear-query" onclick="document.getElementById('questionInput').value=''; document.getElementById('questionInput').focus();" title="Clear input">✕</button>
+          {% endif %}
+
+          <!-- Voice Dictation Button -->
+          <button type="button" class="btn-mic" id="micBtn" title="Speak Query (Speech-to-Text)" onclick="toggleVoiceDictation()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
+          </button>
+
+          <!-- Primary Submit Button -->
+          <button type="submit" class="btn-query" id="queryBtn">
+            <span class="btn-text">Run Query</span>
+            <span class="cpt-shortcut" style="margin-left:4px;"><kbd style="background:rgba(255,255,255,0.2); border-color:transparent; color:#fff;">↵</kbd></span>
+            <div class="btn-loader" style="display:none"><div class="spinner"></div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real-Time Voice Waveform Bar -->
+      <div id="voiceStatus" class="voice-status-bar" style="display:none;">
+        <span class="voice-wave-dot"></span>
+        <span id="voiceStatusText">Listening to voice input... Speak now</span>
+        <button type="button" class="voice-cancel-btn" onclick="stopVoiceDictation()">Cancel</button>
+      </div>
+    </form>
+
+    <!-- Contextual Suggestion Categories -->
+    <div class="suggestions" style="margin-top:16px;">
+      <div class="suggestion-group" style="margin-bottom:8px;">
+        <span class="suggestion-label">Academic Records:</span>
+        <div class="suggestion-chips">
+          <button class="chip" onclick="askPrompt(this)">Show top 5 students by average marks</button>
+          <button class="chip" onclick="askPrompt(this)">Average attendance of each division</button>
+          <button class="chip" onclick="askPrompt(this)">Show all subjects</button>
+          <button class="chip" onclick="askPrompt(this)">Min and max marks per subject</button>
+        </div>
+      </div>
+
+      <div class="suggestion-group">
+        <span class="suggestion-label">Natural &amp; Tabular Queries:</span>
+        <div class="suggestion-chips">
+          <button class="chip" onclick="askPrompt(this)">Average nikalna hai</button>
+          {% if sample_cols and sample_cols|length > 1 %}
+          <button class="chip" onclick="askPrompt(this)">Top 5 records by {{ sample_cols[1] }}</button>
+          <button class="chip" onclick="askPrompt(this)">Count grouped by {{ sample_cols[0] }}</button>
+          {% endif %}
+          <button class="chip" onclick="askPrompt(this)">Total kitne records hain</button>
+          <button class="chip" onclick="askPrompt(this)">Sabhi data dikhao</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ZONE 2: QUERY EXECUTION PROGRESSION (Pipeline Timeline)
+       ═══════════════════════════════════════════════════════════ -->
+  {% if result_loaded %}
+  <div class="execution-pipeline-strip">
+    <div class="pipe-step done">
+      <span class="pipe-icon">✓</span>
+      <span class="pipe-label">Natural Language</span>
+    </div>
+    <div class="pipe-sep active"></div>
+    <div class="pipe-step done">
+      <span class="pipe-icon">✓</span>
+      <span class="pipe-label">AST Verification</span>
+    </div>
+    <div class="pipe-sep active"></div>
+    <div class="pipe-step done">
+      <span class="pipe-icon">✓</span>
+      <span class="pipe-label">Row Limit Injection</span>
+    </div>
+    <div class="pipe-sep active"></div>
+    <div class="pipe-step {% if error %}failed{% else %}done{% endif %}">
+      <span class="pipe-icon">{% if error %}✕{% else %}✓{% endif %}</span>
+      <span class="pipe-label">SQL Execution</span>
+    </div>
+    <div class="pipe-sep active"></div>
+    <div class="pipe-step done">
+      <span class="pipe-icon">✓</span>
+      <span class="pipe-label">Verbal Synthesis</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ZONE 3: RESULTS WORKSPACE
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="results-workspace" style="margin-top: 20px;">
+    
+    <!-- Question Header & Telemetry Strip -->
+    <div class="results-panel" style="margin-bottom: 20px; padding: 18px 24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:16px;">💬</span>
+          <span style="font-size:15px; font-weight:600; color:var(--text-primary);">"{{ question }}"</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          {% if row_count is defined %}
+          <span class="nav-meta-badge">{{ row_count }} row{{ 's' if row_count != 1 }}</span>
+          {% endif %}
+          {% if exec_ms is defined %}
+          <span class="nav-meta-badge">{{ exec_ms }}ms latency</span>
+          {% endif %}
+          <span class="nav-meta-badge" style="background:#EDFDF5; color:#065F46;">AST Governed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verbal Executive Brief (Spoken TTS Player) -->
+    {% if verbal_summary %}
+    <div class="verbal-briefing-card {% if error %}border-danger{% endif %}">
+      <div style="display:flex; align-items:flex-start; gap:12px; flex:1;">
+        <span style="font-size:18px;">🎙️</span>
+        <div class="vbc-text">
+          <strong style="display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-secondary); margin-bottom:2px;">
+            Verbal Analytical Summary
+          </strong>
+          <span id="verbalSummaryText">{{ verbal_summary }}</span>
+        </div>
+      </div>
+      <div class="vbc-actions">
+        <button id="voicePlayBtn" class="btn-speak" onclick="toggleSpeechPlayback()">
+          <span id="playIconText">▶ Listen to Brief</span>
+        </button>
+        <button id="voiceStopBtn" class="btn-speak" onclick="stopSpeechPlayback()" style="display:none; color:var(--status-danger);">
+          <span>⏹ Stop</span>
+        </button>
+      </div>
+      <audio id="ttsAudioPlayer" style="display:none;" preload="none"></audio>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <!-- Error Notification Card -->
+    <div class="flash-alert flash-danger" style="margin-bottom:20px;">
+      <div class="flash-icon">✕</div>
+      <div class="flash-msg">
+        <strong>Execution Halted:</strong> {{ error }}
+      </div>
+    </div>
+    {% if sql %}
+    <div class="sql-box">
+      <div class="sql-header">
+        <span>Blocked Statement</span>
+        <button type="button" class="btn-copy-sql" onclick="copySqlCode()">Copy</button>
+      </div>
+      <pre class="sql-code"><code id="sqlCodeBlock">{{ sql }}</code></pre>
+    </div>
+    {% endif %}
+
+    {% else %}
+
+    <!-- 12-Column Split: Governed SQL (5 Cols) vs Chart (7 Cols) -->
+    <div class="twelve-col-grid" style="margin-bottom: 20px;">
+      
+      <!-- Governed SQL Panel (5 Cols) -->
+      <div class="col-span-5">
+        <div class="gov-card" style="height:100%; display:flex; flex-direction:column;">
+          <div class="gov-card-header">
+            <span style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              Approved Governed SQL
+            </span>
+            <button type="button" class="btn-copy-sql" id="copySqlBtn" onclick="copySqlCode()">Copy SQL</button>
+          </div>
+          <div class="sql-box" style="flex:1; border:none; border-radius:0; margin-bottom:0; background:var(--surface-code);">
+            <pre class="sql-code" style="margin:0;"><code id="sqlCodeBlock">{{ sql }}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Visualization (7 Cols) -->
+      <div class="col-span-7">
+        <div class="gov-card" style="height:100%;">
+          <div class="gov-card-header">
+            <span style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              Analytical Visualization
+            </span>
+            <span class="nav-meta-badge">Automated Chart</span>
+          </div>
+          <div style="padding: 16px;">
+            {% if chart_json %}
+            <div style="height: 200px;">
+              <canvas id="resultChart"></canvas>
+            </div>
+            {% else %}
+            <div style="height: 200px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px;">
+              <span>Table records retrieved successfully.</span>
+              <span style="font-size:11px; margin-top:4px;">No multi-category numeric distribution to chart.</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense Structured Database Table -->
+    {% if rows %}
+    <div class="gov-card" style="margin-bottom: 20px;">
+      <div class="gov-card-header">
+        <span style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3h18v18H3z"></path>
+            <path d="M3 9h18"></path>
+            <path d="M3 15h18"></path>
+            <path d="M9 3v18"></path>
+          </svg>
+          Structured Result Records ({{ rows|length }})
+        </span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="text" id="tableFilterInput" placeholder="Filter rows…" oninput="filterTableRows()" 
+                 style="font-size:12px; padding:4px 8px; border:1px solid var(--border-subtle); border-radius:var(--radius-sm); outline:none;" />
+        </div>
+      </div>
+      <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+        <table class="data-table" id="structuredDataTable">
+          <thead>
+            <tr>
+              {% for col in columns %}
+              <th onclick="sortTableByCol({{ loop.index0 }})" style="cursor:pointer;" title="Click to sort">
+                {{ col.replace('_', ' ').title() }} <span style="font-size:10px; opacity:0.6;">⇅</span>
+              </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody id="structuredDataTableBody">
+            {% for row in rows %}
+            <tr>
+              {% for col in columns %}
+              <td {% if row[col] is number %}style="font-family:var(--font-mono); text-align:right;"{% endif %}>
+                {{ row[col] if row[col] is not none else '—' }}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Result Feedback Action Bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--surface-primary); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+      <span style="font-size:12px; color:var(--text-secondary);">Was this analytical result accurate and helpful?</span>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="chip" onclick="this.textContent='Thank you! ✓'; this.disabled=true;">Yes, Helpful</button>
+        <button type="button" class="chip" onclick="this.textContent='Feedback logged'; this.disabled=true;">No</button>
+      </div>
+    </div>
+
+    {% endif %}
+  </div>
+
+  {% else %}
+  <!-- Empty State (Typographic & Structured Lines) -->
+  <div class="empty-state-canvas">
+    <div class="esc-box">
+      <div class="esc-motif">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" stroke-width="1.2">
+          <rect x="2" y="2" width="20" height="8" rx="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+      </div>
+      <h3>Enter an inquiry to start querying</h3>
+      <p>Type a plain-English or Hindi question above, or select one of the suggested inquiries to execute authorized SQL against your active dataset.</p>
+      <div class="esc-badges">
+        <span>AST Read-Only Protection</span>
+        <span>•</span>
+        <span>Safe Row Limit Injection</span>
+        <span>•</span>
+        <span>Neural Voice Narration</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% block scripts %}
+<script>
+// Chip input filler
+function askPrompt(btn) {
+  const inp = document.getElementById('questionInput');
+  inp.value = btn.textContent.trim();
+  document.getElementById('queryForm').submit();
+}
+
+// Copy SQL code button with 200ms visual checkmark
+function copySqlCode() {
+  const code = document.getElementById('sqlCodeBlock').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('copySqlBtn');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied ✓';
+      btn.style.color = 'var(--status-success)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.color = '';
+      }, 1800);
+    }
+  });
+}
+
+// Client-side search within result table
+function filterTableRows() {
+  const q = document.getElementById('tableFilterInput').value.toLowerCase();
+  document.querySelectorAll('#structuredDataTableBody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// Column sorting
+let sortAsc = {};
+function sortTableByCol(colIdx) {
+  const tbody = document.getElementById('structuredDataTableBody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const isAsc = (sortAsc[colIdx] = !sortAsc[colIdx]);
+  rows.sort((a, b) => {
+    const av = a.cells[colIdx].textContent.trim();
+    const bv = b.cells[colIdx].textContent.trim();
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return isAsc ? an - bn : bn - an;
+    return isAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// TTS Spoken Audio Playback
+let audioPlaying = false;
+const audioPlayer = document.getElementById('ttsAudioPlayer');
+const summaryText = {{ (verbal_summary or '') | tojson }};
+
+function toggleSpeechPlayback() {
+  if (!audioPlayer) return;
+  if (audioPlaying) {
+    stopSpeechPlayback();
+  } else {
+    playSpeech();
+  }
+}
+
+function playSpeech() {
+  if (!audioPlayer || !summaryText) return;
+  const playBtn = document.getElementById('voicePlayBtn');
+  const stopBtn = document.getElementById('voiceStopBtn');
+  const iconText = document.getElementById('playIconText');
+
+  const ttsUrl = "{{ url_for('tts_api') }}?text=" + encodeURIComponent(summaryText);
+  audioPlayer.src = ttsUrl;
+  audioPlayer.play().then(() => {
+    audioPlaying = true;
+    if (iconText) iconText.textContent = 'Playing Brief…';
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+  }).catch(err => {
+    console.warn("TTS Audio playback fallback to SpeechSynthesis:", err);
+    if ('speechSynthesis' in window) {
+      const utter = new SpeechSynthesisUtterance(summaryText);
+      utter.onend = () => stopSpeechPlayback();
+      window.speechSynthesis.speak(utter);
+      audioPlaying = true;
+      if (iconText) iconText.textContent = 'Playing (Client TTS)…';
+      if (stopBtn) stopBtn.style.display = 'inline-flex';
+    }
+  });
+
+  audioPlayer.onended = () => stopSpeechPlayback();
+}
+
+function stopSpeechPlayback() {
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  audioPlaying = false;
+  const stopBtn = document.getElementById('voiceStopBtn');
+  const iconText = document.getElementById('playIconText');
+  if (iconText) iconText.textContent = '▶ Listen to Brief';
+  if (stopBtn) stopBtn.style.display = 'none';
+}
+
+// Render dynamic analytical chart if JSON available
+document.addEventListener("DOMContentLoaded", function() {
+  {% if chart_json %}
+  const chartCanvas = document.getElementById('resultChart');
+  if (chartCanvas) {
+    const chartConfig = {{ chart_json | safe }};
+    new Chart(chartCanvas, {
+      type: chartConfig.type || 'bar',
+      data: {
+        labels: chartConfig.labels,
+        datasets: [{
+          label: (chartConfig.datasets && chartConfig.datasets[0].label) || 'Value',
+          data: (chartConfig.datasets && chartConfig.datasets[0].data) || [],
+          backgroundColor: '#3658D4',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#E5E7EB' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+  {% endif %}
+});
+</script>
+{% endblock %}
+
+{% endblock %}

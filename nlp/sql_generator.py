@@ -232,6 +232,8 @@ def generate_sql_for_dataset(question: str, table_name: str, columns: list) -> d
     """
     Generate SQL for any uploaded dataset table using generic patterns.
     Columns is a list of column name strings.
+    Fully supports English, Hindi, and Hinglish vernacular (e.g., 'average nikalna hai',
+    'sabse jyada salary kiski hai', 'top 5 dikhao', 'department wise count').
     """
     q = question.lower().strip()
     toks = _tokens(q)
@@ -242,161 +244,119 @@ def generate_sql_for_dataset(question: str, table_name: str, columns: list) -> d
     numeric_cols = [c for c in columns if any(k in c.lower() for k in
                     ("marks","score","grade","salary","price","amount",
                      "count","total","avg","rate","value","age","year",
-                     "number","num","qty","quantity","revenue","profit"))]
+                     "number","num","qty","quantity","revenue","profit","cost","sales","units"))]
     cat_cols = [c for c in columns if c not in numeric_cols]
 
-    first_col = columns[0] if columns else "id"
-    num_col   = numeric_cols[0] if numeric_cols else (columns[1] if len(columns) > 1 else columns[0])
-    cat_col   = cat_cols[0] if cat_cols else columns[0]
+    num_col = numeric_cols[0] if numeric_cols else (columns[1] if len(columns) > 1 else columns[0])
+    cat_col = cat_cols[0] if cat_cols else columns[0]
 
     tbl = f'"{table_name}"'
 
-    # ── Pattern matching ───────────────────────────────────────────────────────
+    # Keyword synonyms (English + Hindi/Hinglish)
+    is_avg = any(k in toks or k in q for k in ("average", "avg", "mean", "ausat", "nikalna", "nikalo", "nikal", "madhya"))
+    is_top = any(k in toks or k in q for k in ("top", "highest", "best", "maximum", "max", "sabse jyada", "sabse bada", "zyada", "jyada", "accha", "peak"))
+    is_bottom = any(k in toks or k in q for k in ("bottom", "lowest", "worst", "minimum", "min", "sabse kam", "sabse chhota", "kam", "least"))
+    is_count = any(k in toks or k in q for k in ("count", "kitne", "kitna", "ginna", "gino", "sankhya", "each", "per", "group by", "wise", "hisab"))
+    is_sum = any(k in toks or k in q for k in ("sum", "total", "kul", "jod", "jodo", "pura sum"))
+    is_show_all = any(k in toks or k in q for k in ("all", "every", "list", "show", "display", "fetch", "get", "dikhao", "dekho", "batao", "sabhi", "saara"))
 
-    # Show all
-    if any(k in toks for k in ("all","every","list","show","display","fetch","get")):
-        if not any(k in toks for k in ("top","above","below","count","average","avg","sum","max","min","group")):
-            return {
-                "sql": f"SELECT * FROM {tbl} LIMIT 200",
-                "description": f"All records from {table_name}",
-                "matched": True, "confidence": 3,
-            }
-
-    # Top N by numeric column
-    if "top" in toks or "highest" in toks or "best" in toks or "maximum" in toks:
-        col = num_col
-        # try to find a column mentioned by name
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        return {
-            "sql": f'SELECT * FROM {tbl} ORDER BY "{col}" DESC LIMIT {limit_n}',
-            "description": f"Top {limit_n} records by {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Bottom N / lowest
-    if "bottom" in toks or "lowest" in toks or "worst" in toks or "minimum" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        return {
-            "sql": f'SELECT * FROM {tbl} ORDER BY "{col}" ASC LIMIT {limit_n}',
-            "description": f"Bottom {limit_n} records by {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Count / group by
-    if "count" in toks or "group" in toks or "each" in toks or "per" in toks or "by" in toks:
-        col = cat_col
-        for c in columns:
-            if c.lower() in q and c != num_col:
-                col = c; break
-        return {
-            "sql": f'SELECT "{col}", COUNT(*) AS count FROM {tbl} GROUP BY "{col}" ORDER BY count DESC',
-            "description": f"Count grouped by {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Average / mean
-    if "average" in toks or "avg" in toks or "mean" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        grp = cat_col
-        for c in columns:
-            if c.lower() in q and c != col:
-                grp = c; break
-        if grp != col:
-            return {
-                "sql": f'SELECT "{grp}", ROUND(AVG("{col}"), 2) AS avg_{col} FROM {tbl} GROUP BY "{grp}" ORDER BY avg_{col} DESC',
-                "description": f"Average {col} grouped by {grp}",
-                "matched": True, "confidence": 3,
-            }
-        return {
-            "sql": f'SELECT ROUND(AVG("{col}"), 2) AS avg_{col} FROM {tbl}',
-            "description": f"Average value of {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Sum / total
-    if "sum" in toks or "total" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        return {
-            "sql": f'SELECT ROUND(SUM("{col}"), 2) AS total_{col} FROM {tbl}',
-            "description": f"Total sum of {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Above / greater than
-    if "above" in toks or "greater" in toks or "more" in toks or "exceed" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        threshold = limit_n
-        return {
-            "sql": f'SELECT * FROM {tbl} WHERE "{col}" > {threshold} ORDER BY "{col}" DESC',
-            "description": f"Records where {col} > {threshold}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Below / less than
-    if "below" in toks or "less" in toks or "under" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        threshold = limit_n
-        return {
-            "sql": f'SELECT * FROM {tbl} WHERE "{col}" < {threshold} ORDER BY "{col}" ASC',
-            "description": f"Records where {col} < {threshold}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Min / max
-    if "min" in toks and "max" in toks:
-        col = num_col
-        for c in columns:
-            if c.lower() in q:
-                col = c; break
-        return {
-            "sql": f'SELECT MIN("{col}") AS min_{col}, MAX("{col}") AS max_{col} FROM {tbl}',
-            "description": f"Min and max of {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    if "min" in toks or "minimum" in toks:
-        col = num_col
-        return {
-            "sql": f'SELECT * FROM {tbl} ORDER BY "{col}" ASC LIMIT {limit_n}',
-            "description": f"Records with lowest {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    if "max" in toks or "maximum" in toks:
-        col = num_col
-        return {
-            "sql": f'SELECT * FROM {tbl} ORDER BY "{col}" DESC LIMIT {limit_n}',
-            "description": f"Records with highest {col}",
-            "matched": True, "confidence": 3,
-        }
-
-    # Column mentioned by exact name → show all filtered by it
+    # Try to identify an explicit column mentioned in question
+    mentioned_col = None
     for c in columns:
-        if c.lower() in q and len(c) > 2:
-            return {
-                "sql": f'SELECT "{c}", COUNT(*) AS count FROM {tbl} GROUP BY "{c}" ORDER BY count DESC',
-                "description": f"Distribution of {c}",
-                "matched": True, "confidence": 2,
-            }
+        c_clean = c.lower().replace("_", " ")
+        if c.lower() in q or c_clean in q:
+            mentioned_col = c
+            break
 
-    # Default: show all
+    # 1. Average / Mean ("average nikalna hai", "average of salary")
+    if is_avg:
+        target_col = mentioned_col if (mentioned_col and mentioned_col in numeric_cols) else num_col
+        # Check for group by / per category
+        grp_col = None
+        for c in cat_cols:
+            if c.lower() in q or c.lower().replace("_", " ") in q:
+                grp_col = c
+                break
+        if grp_col and grp_col != target_col:
+            return {
+                "sql": f'SELECT "{grp_col}", ROUND(AVG("{target_col}"), 2) AS avg_{target_col} FROM {tbl} GROUP BY "{grp_col}" ORDER BY avg_{target_col} DESC',
+                "description": f"Average {target_col} grouped by {grp_col}",
+                "matched": True, "confidence": 3,
+            }
+        return {
+            "sql": f'SELECT ROUND(AVG("{target_col}"), 2) AS avg_{target_col} FROM {tbl}',
+            "description": f"Average value of {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 2. Top N / Highest ("top 5", "sabse jyada", "highest marks")
+    if is_top:
+        target_col = mentioned_col if (mentioned_col and mentioned_col in numeric_cols) else num_col
+        return {
+            "sql": f'SELECT * FROM {tbl} ORDER BY "{target_col}" DESC LIMIT {limit_n}',
+            "description": f"Top {limit_n} records by {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 3. Bottom N / Lowest ("sabse kam", "lowest", "worst")
+    if is_bottom:
+        target_col = mentioned_col if (mentioned_col and mentioned_col in numeric_cols) else num_col
+        return {
+            "sql": f'SELECT * FROM {tbl} ORDER BY "{target_col}" ASC LIMIT {limit_n}',
+            "description": f"Bottom {limit_n} records by {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 4. Count / Group By ("count by department", "har division me kitne students hain")
+    if is_count:
+        if any(w in q for w in ("total kitne", "total count", "kul sankhya", "how many records", "kitne records", "total records")):
+            return {
+                "sql": f'SELECT COUNT(*) AS total_records FROM {tbl}',
+                "description": f"Total record count in {table_name}",
+                "matched": True, "confidence": 3,
+            }
+        target_col = mentioned_col or cat_col
+        return {
+            "sql": f'SELECT "{target_col}", COUNT(*) AS count FROM {tbl} GROUP BY "{target_col}" ORDER BY count DESC',
+            "description": f"Count grouped by {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 5. Sum / Total ("total salary", "kul jod")
+    if is_sum:
+        target_col = mentioned_col if (mentioned_col and mentioned_col in numeric_cols) else num_col
+        return {
+            "sql": f'SELECT ROUND(SUM("{target_col}"), 2) AS total_{target_col} FROM {tbl}',
+            "description": f"Total sum of {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 6. Min / Max
+    if ("min" in toks and "max" in toks) or ("minimum" in q and "maximum" in q):
+        target_col = mentioned_col if (mentioned_col and mentioned_col in numeric_cols) else num_col
+        return {
+            "sql": f'SELECT MIN("{target_col}") AS min_{target_col}, MAX("{target_col}") AS max_{target_col} FROM {tbl}',
+            "description": f"Min and max of {target_col}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 7. Show all / list ("sabhi data dikhao", "show all")
+    if is_show_all:
+        return {
+            "sql": f"SELECT * FROM {tbl} LIMIT 100",
+            "description": f"All records from {table_name}",
+            "matched": True, "confidence": 3,
+        }
+
+    # 8. Filter by exact column if mentioned
+    if mentioned_col:
+        return {
+            "sql": f'SELECT "{mentioned_col}", COUNT(*) AS count FROM {tbl} GROUP BY "{mentioned_col}" ORDER BY count DESC',
+            "description": f"Distribution by {mentioned_col}",
+            "matched": True, "confidence": 2,
+        }
+
+    # Default fallback
     return {
         "sql": f"SELECT * FROM {tbl} LIMIT 50",
         "description": f"First 50 records from {table_name}",

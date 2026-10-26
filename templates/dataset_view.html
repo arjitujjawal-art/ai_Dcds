@@ -1,125 +1,117 @@
 {% extends "base.html" %}
-{% block title %}{{ schema.display_name }} – QueryMind{% endblock %}
+{% block title %}{{ schema.display_name }} – Schema &amp; Explorer – QueryMind{% endblock %}
+{% block breadcrumb %}Datasets / {{ schema.display_name }}{% endblock %}
+
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <div class="role-badge-lg {{ 'admin-badge-lg' if role == 'admin' else 'teacher-badge-lg' }}" style="margin-bottom:8px;">
-      📊 Dataset View
-    </div>
-    <h1>{{ schema.display_name }}</h1>
-    <div class="dc-meta" style="margin-top:8px;">
-      <span class="dc-tag">{{ schema.row_count }} rows</span>
-      <span class="dc-tag">{{ schema.col_count }} columns</span>
-      <span class="dc-tag">Uploaded by {{ schema.uploaded_by }}</span>
-      <span class="dc-tag">📅 {{ schema.uploaded_at[:16] }}</span>
-    </div>
-  </div>
-  <div style="display:flex; gap:12px; align-items:center;">
-    <a href="{{ url_for('datasets') }}" class="btn-outline">← All Datasets</a>
-    {% if role == 'admin' %}
-    <form method="POST" action="{{ url_for('dataset_delete', table_name=table_name) }}"
-          onsubmit="return confirm('Delete this dataset permanently?')">
-      <button type="submit" class="btn-delete-ds">🗑️ Delete</button>
-    </form>
-    {% endif %}
-  </div>
-</div>
+<div class="workspace-view">
 
-<!-- Schema & Column Inspector -->
-<div class="gov-card" style="margin-bottom:24px;">
-  <div class="gov-card-header">
-    <h3>🗃️ Schema / Column Inspector</h3>
-    <span class="gov-badge-green">{{ schema.col_count }} Columns Detected</span>
-  </div>
-  <div style="padding:16px 20px;">
-    <div class="schema-cols">
-      {% for col in schema.col_info %}
-      <div class="schema-col-pill">
-        <span class="sc-name">{{ col.name }}</span>
-        <span class="sc-type">{{ col.dtype }}</span>
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--accent-primary);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-student">
+        Dataset Schema &amp; Tabular Explorer
       </div>
-      {% endfor %}
+      <h1>{{ schema.display_name }}</h1>
+      <p class="hero-sub">Table: <code style="font-family:var(--font-mono);">{{ table_name }}</code> · {{ schema.row_count }} records · {{ schema.col_count }} attributes · Ingested by {{ schema.uploaded_by }}.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('portal2', table=table_name) }}" class="btn-query">
+          Query in Studio →
+        </a>
+        {% if role == 'admin' %}
+        <form method="POST" action="{{ url_for('dataset_delete', table_name=table_name) }}"
+              onsubmit="return confirm('Permanently delete table {{ table_name }}?')">
+          <button type="submit" class="chip" style="color:var(--status-danger); border-color:#FECACA; background:#FEF2F2;">
+            Delete Table
+          </button>
+        </form>
+        {% endif %}
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Query Console for this Dataset -->
-<div class="query-card {{ 'admin-card' if role == 'admin' else 'teacher-card' }}">
-  <div class="card-label {{ 'admin-label' if role == 'admin' else 'teacher-label' }}">
-    🧠 Ask a Question About This Dataset
+  <!-- Schema & Column Inspector -->
+  <div class="gov-card" style="margin-bottom:24px;">
+    <div class="gov-card-header">
+      <h3>Schema &amp; Column Type Inspector</h3>
+      <span class="nav-meta-badge">{{ schema.col_count }} Attributes Detected</span>
+    </div>
+    <div style="padding:16px 20px;">
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        {% for col in schema.col_info %}
+        <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:var(--surface-secondary); border:1px solid var(--border-subtle); border-radius:var(--radius-sm);">
+          <strong style="font-size:13px; color:var(--text-primary);">{{ col.name }}</strong>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--accent-primary); background:var(--accent-subtle); padding:1px 5px; border-radius:3px;">
+            {{ col.dtype }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
-  <form method="POST" action="{{ url_for('dataset_query', table_name=table_name) }}" id="queryForm">
-    <div class="query-input-group">
-      <div class="query-input-wrapper {{ 'admin-input' if role == 'admin' else 'teacher-input' }}">
+
+  <!-- 5-Row Data Preview Table -->
+  {% if schema.preview %}
+  <div class="gov-card" style="margin-bottom:24px;">
+    <div class="gov-card-header">
+      <h3>Initial Tabular Records (First 5 Rows)</h3>
+      <span class="nav-meta-badge">Sample Data</span>
+    </div>
+    <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            {% for col in schema.preview_cols %}
+            <th>{{ col.replace('_', ' ').title() }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in schema.preview %}
+          <tr>
+            {% for col in schema.preview_cols %}
+            <td {% if row[col] is number %}style="font-family:var(--font-mono); text-align:right;"{% endif %}>
+              {{ row[col] if row[col] is not none else '—' }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Natural-Language Query Console for this Dataset -->
+  <div class="query-card">
+    <div class="card-label">💬 Ask a Question About {{ schema.display_name }}</div>
+    <form method="POST" action="{{ url_for('portal2_ask') }}" id="queryForm">
+      <input type="hidden" name="table_name" value="{{ table_name }}" />
+      <div class="query-input-wrapper">
         <span class="query-prefix">💬</span>
         <input type="text" name="question" id="questionInput" class="query-input"
-          placeholder="e.g. Top 10 by salary, Count by department, Average score…"
-          autocomplete="off" required />
-        <button type="submit" class="btn-query {{ 'admin-query-btn' if role == 'admin' else 'teacher-query-btn' }}" id="queryBtn">
-          <span class="btn-text">Query</span>
-          <div class="btn-loader" style="display:none"><div class="spinner"></div></div>
-        </button>
+          placeholder="e.g. Average nikalna hai, Top 10 records, Count grouped by category…" required />
+        <button type="submit" class="btn-query">Run Query</button>
+      </div>
+    </form>
+    <div class="suggestions">
+      <span class="suggestion-label">Suggested Inquiries:</span>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="ask(this)">Average nikalna hai</button>
+        {% if schema.col_info and schema.col_info|length > 1 %}
+        <button class="chip" onclick="ask(this)">Top 5 records by {{ schema.col_info[1].name }}</button>
+        <button class="chip" onclick="ask(this)">Count grouped by {{ schema.col_info[0].name }}</button>
+        <button class="chip" onclick="ask(this)">Min and max {{ schema.col_info[1].name }}</button>
+        {% endif %}
+        <button class="chip" onclick="ask(this)">Total kitne records hain</button>
       </div>
     </div>
-  </form>
-  <div class="suggestions">
-    <p class="suggestion-label">💡 Example queries for this dataset:</p>
-    <div class="suggestion-chips">
-      <button class="chip {{ 'admin-chip' if role == 'admin' else 'teacher-chip' }}" onclick="ask(this)">Show all records</button>
-      <button class="chip {{ 'admin-chip' if role == 'admin' else 'teacher-chip' }}" onclick="ask(this)">Top 10 by {% if schema.col_info|length > 1 %}{{ schema.col_info[1].name }}{% else %}{{ schema.col_info[0].name }}{% endif %}</button>
-      <button class="chip {{ 'admin-chip' if role == 'admin' else 'teacher-chip' }}" onclick="ask(this)">Count by {{ schema.col_info[0].name }}</button>
-      <button class="chip {{ 'admin-chip' if role == 'admin' else 'teacher-chip' }}" onclick="ask(this)">Average {% if schema.col_info|length > 1 %}{{ schema.col_info[1].name }}{% else %}{{ schema.col_info[0].name }}{% endif %}</button>
-      {% if schema.col_info|length > 2 %}
-      <button class="chip {{ 'admin-chip' if role == 'admin' else 'teacher-chip' }}" onclick="ask(this)">Min and max {{ schema.col_info[2].name }}</button>
-      {% endif %}
-    </div>
   </div>
-</div>
 
-<!-- Data Preview Table -->
-{% if schema.sample_rows %}
-<div class="gov-card" style="margin-top:24px;">
-  <div class="gov-card-header">
-    <h3>👀 Data Preview (First 5 rows)</h3>
-    <span class="gov-badge-green">Live Data</span>
-  </div>
-  <div class="table-scroll">
-    <table class="result-table">
-      <thead>
-        <tr>
-          {% for col in schema.all_columns %}
-          <th>{{ col.replace('_', ' ').title() }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in schema.sample_rows %}
-        <tr>
-          {% for col in schema.all_columns %}
-          <td>{{ row.get(col, '—') }}</td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
 </div>
-{% endif %}
-
-<script>
-function ask(btn) {
-  document.getElementById('questionInput').value = btn.textContent.trim();
-  document.getElementById('queryForm').submit();
-}
-document.getElementById('queryForm').addEventListener('submit', function() {
-  const btn = document.getElementById('queryBtn');
-  btn.querySelector('.btn-text').style.display = 'none';
-  btn.querySelector('.btn-loader').style.display = 'flex';
-  btn.disabled = true;
-});
-</script>
 {% endblock %}

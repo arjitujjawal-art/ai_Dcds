@@ -6,3 +6,4 @@ sqlglot>=18.0.0
 pytest>=7.4.0
 pandas>=2.0.0
 openpyxl>=3.1.0
+edge-tts>=6.1.0

@@ -1,76 +1,112 @@
 {% extends "base.html" %}
-{% block title %}Audit Dashboard – QueryMind{% endblock %}
+{% block title %}Security &amp; Audit Telemetry – QueryMind{% endblock %}
+{% block breadcrumb %}Administrator / Security &amp; Audit{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-    Audit Dashboard
-  </h1>
-</div>
+<div class="workspace-view">
 
-<div class="audit-layout">
-  <!-- Audit Events -->
-  <div class="audit-panel">
-    <h2 class="panel-title">🔐 Security Events</h2>
-    {% if events %}
-    <div class="audit-table-wrap">
-      <table class="audit-table">
-        <thead>
-          <tr>
-            <th>Event</th>
-            <th>User</th>
-            <th>Details</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ev in events %}
-          <tr class="event-{{ ev.event_type }}">
-            <td>
-              <span class="event-badge">
-                {% if ev.event_type == 'login' %}🔑
-                {% elif ev.event_type == 'logout' %}🚪
-                {% elif ev.event_type == 'login_failed' %}⛔
-                {% elif ev.event_type == 'validation_blocked' %}🛡
-                {% else %}📌{% endif %}
-                {{ ev.event_type.replace('_', ' ').title() }}
-              </span>
-            </td>
-            <td>{{ ev.username or '—' }}</td>
-            <td class="audit-details">{{ ev.details or '—' }}</td>
-            <td class="audit-time">{{ ev.timestamp }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="empty-info">No audit events recorded yet.</p>
-    {% endif %}
-  </div>
-
-  <!-- Feedback -->
-  <div class="audit-panel">
-    <h2 class="panel-title">💬 User Feedback</h2>
-    {% if feedback %}
-    <div class="feedback-list">
-      {% for fb in feedback %}
-      <div class="feedback-entry {{ fb.rating }}">
-        <div class="fb-top">
-          <span class="rating-badge {{ fb.rating }}">{{ '👍' if fb.rating == 'helpful' else '👎' }} {{ fb.rating.replace('_',' ').title() }}</span>
-          <span class="fb-time">{{ fb.timestamp }}</span>
-        </div>
-        <div class="fb-question">{{ fb.question }}</div>
-        {% if fb.comment %}
-        <div class="fb-comment">{{ fb.comment }}</div>
-        {% endif %}
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-admin);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-admin">
+        Zero-Trust Telemetry &amp; Access Log
       </div>
-      {% endfor %}
+      <h1>Security &amp; <span style="color:var(--role-admin);">Audit Telemetry</span></h1>
+      <p class="hero-sub">Immutable operational record of authentication events, AST security interventions, and user feedback logs.</p>
     </div>
-    {% else %}
-    <p class="empty-info">No feedback submitted yet.</p>
-    {% endif %}
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Governance Status</span>
+      <span class="role-badge-lg badge-student" style="margin-top:4px;">● Policy Engine Active</span>
+    </div>
   </div>
+
+  <div class="twelve-col-grid" style="margin-bottom: 24px;">
+    
+    <!-- Security Events Table (8 Cols) -->
+    <div class="col-span-8">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>Security &amp; Authentication Events</h3>
+          <span class="nav-meta-badge">{{ events|length if events else 0 }} Logged</span>
+        </div>
+        <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Actor</th>
+                <th>Details</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if events %}
+                {% for ev in events %}
+                <tr>
+                  <td>
+                    <span class="nav-meta-badge" style="font-family:var(--font-mono);">
+                      {{ ev.event_type }}
+                    </span>
+                  </td>
+                  <td><strong>{{ ev.username or '—' }}</strong></td>
+                  <td style="max-width:320px; font-size:12px; font-family:var(--font-mono); color:var(--text-secondary); word-break:break-all;">
+                    {{ ev.details or '—' }}
+                  </td>
+                  <td style="font-size:11px; color:var(--text-muted);">{{ ev.timestamp }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No security events recorded.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Feedback Log (4 Cols) -->
+    <div class="col-span-4">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>User Feedback</h3>
+          <span class="nav-meta-badge">{{ feedback|length if feedback else 0 }} Received</span>
+        </div>
+        <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if feedback %}
+                {% for fb in feedback %}
+                <tr>
+                  <td style="font-size:12px;">{{ fb.question }}</td>
+                  <td>
+                    {% if fb.is_helpful %}
+                      <span class="nav-meta-badge" style="background:#EDFDF5; color:#065F46;">Helpful</span>
+                    {% else %}
+                      <span class="nav-meta-badge" style="background:#FEF2F2; color:#991B1B;">Unhelpful</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="2" style="text-align:center; padding:24px; color:var(--text-muted);">No feedback recorded.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 {% endblock %}

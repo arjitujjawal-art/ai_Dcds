@@ -1,88 +1,130 @@
 {% extends "base.html" %}
-{% block title %}Query History – QueryMind{% endblock %}
+{% block title %}Query History &amp; Telemetry – QueryMind{% endblock %}
+{% block breadcrumb %}Telemetry / Query History{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    Query History
-  </h1>
-  <div class="header-actions">
-    <a href="{{ url_for('export_csv') }}" class="btn-outline">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Export CSV
-    </a>
-  </div>
-</div>
+<div class="workspace-view">
 
-{% if records %}
-<div class="history-filter">
-  <input type="text" id="histSearch" placeholder="🔍  Search history…" oninput="filterHist()" class="search-input" />
-  <div class="filter-chips">
-    <button class="filter-chip active" onclick="filterByStatus(null,this)">All</button>
-    <button class="filter-chip" onclick="filterByStatus('success',this)">✅ Success</button>
-    <button class="filter-chip" onclick="filterByStatus('no_match',this)">❓ No Match</button>
-    <button class="filter-chip" onclick="filterByStatus('validation_failed',this)">🛡 Blocked</button>
-    <button class="filter-chip" onclick="filterByStatus('db_error',this)">💥 Error</button>
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--accent-primary);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-student">
+        Telemetry &amp; Audit Logs
+      </div>
+      <h1>Query <span style="color:var(--accent-primary);">Execution History</span></h1>
+      <p class="hero-sub">Complete audit record of natural-language inquiries, generated SQL statements, row counts, and execution latency.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Data Export</span>
+      <a href="{{ url_for('export_csv') }}" class="btn-query" style="background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border-subtle); margin-top:4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export CSV
+      </a>
+    </div>
   </div>
-</div>
 
-<div class="history-grid" id="historyGrid">
-  {% for rec in records %}
-  <div class="history-card {{ rec.status }}" data-status="{{ rec.status }}" data-search="{{ rec.question | lower }}">
-    <div class="hist-top">
-      <span class="status-badge status-{{ rec.status }}">
-        {% if rec.status == 'success' %}✅{% elif rec.status == 'no_match' %}❓{% elif rec.status == 'validation_failed' %}🛡{% else %}💥{% endif %}
-        {{ rec.status.replace('_', ' ').title() }}
-      </span>
-      <span class="hist-time">{{ rec.timestamp }}</span>
+  <!-- Filter & Search Toolbar -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+    <div class="suggestion-chips" id="statusFilterChips">
+      <button class="chip" onclick="filterByStatus(null, this)" style="font-weight:600;">All Queries</button>
+      <button class="chip" onclick="filterByStatus('success', this)">Success</button>
+      <button class="chip" onclick="filterByStatus('no_match', this)">No Match</button>
+      <button class="chip" onclick="filterByStatus('validation_failed', this)">Blocked</button>
+      <button class="chip" onclick="filterByStatus('db_error', this)">Error</button>
     </div>
-    <div class="hist-question">💬 {{ rec.question }}</div>
-    {% if rec.generated_sql %}
-    <details class="hist-sql-details">
-      <summary>View SQL</summary>
-      <pre class="hist-sql">{{ rec.generated_sql }}</pre>
-    </details>
-    {% endif %}
-    <div class="hist-footer">
-      {% if role in ('admin','teacher') %}
-      <span class="hist-user">👤 {{ rec.username }}</span>
-      {% endif %}
-      {% if rec.result_row_count is not none %}
-      <span class="hist-rows">{{ rec.result_row_count }} rows</span>
-      {% endif %}
-      {% if rec.execution_time_ms is not none %}
-      <span class="hist-ms">⚡ {{ rec.execution_time_ms }}ms</span>
-      {% endif %}
-    </div>
-    {% if rec.error %}
-    <div class="hist-error">{{ rec.error }}</div>
-    {% endif %}
+    <input type="text" id="histSearchInput" placeholder="Filter questions or users…" oninput="filterHistoryTable()" 
+           style="font-size:13px; padding:6px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-sm); outline:none; width:260px;" />
   </div>
-  {% endfor %}
+
+  <!-- History Telemetry Table -->
+  <div class="gov-card">
+    <div class="gov-card-header">
+      <h3>Historical Executions ({{ records|length if records else 0 }})</h3>
+      <span class="nav-meta-badge">Deterministic Gateway</span>
+    </div>
+    <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+      <table class="data-table" id="historyTable">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Status</th>
+            <th>Generated SQL</th>
+            <th>User</th>
+            <th>Rows</th>
+            <th>Latency</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          {% if records %}
+            {% for rec in records %}
+            <tr data-status="{{ rec.status }}" data-text="{{ rec.question | lower }} {{ rec.username | lower }}">
+              <td style="font-weight:600; max-width:280px;">{{ rec.question }}</td>
+              <td>
+                {% if rec.status == 'success' %}
+                  <span class="nav-meta-badge" style="background:#EDFDF5; color:#065F46;">Success</span>
+                {% elif rec.status in ('validation_failed', 'blocked') %}
+                  <span class="nav-meta-badge" style="background:#FEF2F2; color:#991B1B;">Blocked</span>
+                {% elif rec.status == 'no_match' %}
+                  <span class="nav-meta-badge" style="background:#FFFBEB; color:#92400E;">No Match</span>
+                {% else %}
+                  <span class="nav-meta-badge" style="background:#FEE2E2; color:#B91C1C;">Error</span>
+                {% endif %}
+              </td>
+              <td style="max-width:280px;">
+                {% if rec.generated_sql %}
+                <details style="font-size:12px; font-family:var(--font-mono); cursor:pointer;">
+                  <summary style="color:var(--accent-primary);">View SQL</summary>
+                  <pre style="margin-top:6px; padding:6px; background:var(--surface-code); border-radius:4px; white-space:pre-wrap; word-break:break-all;">{{ rec.generated_sql }}</pre>
+                </details>
+                {% else %}
+                <span style="color:var(--text-muted); font-size:11px;">—</span>
+                {% endif %}
+              </td>
+              <td><span class="nav-meta-badge">{{ rec.username }}</span></td>
+              <td style="font-family:var(--font-mono); text-align:right;">{{ rec.result_row_count if rec.result_row_count is not none else '—' }}</td>
+              <td style="font-family:var(--font-mono); text-align:right;">{{ rec.execution_time_ms if rec.execution_time_ms is not none else '—' }}ms</td>
+              <td style="font-size:11px; color:var(--text-muted);">{{ rec.timestamp }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">No query history recorded yet.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
-{% else %}
-<div class="empty-state">
-  <span class="empty-icon">📭</span>
-  <p>No query history yet. Go ask something!</p>
-  <a href="{{ url_for('dashboard') }}" class="btn-primary">Ask a Question</a>
-</div>
-{% endif %}
 
 <script>
-function filterHist() {
-  const q = document.getElementById('histSearch').value.toLowerCase();
-  document.querySelectorAll('.history-card').forEach(c => {
-    c.style.display = c.dataset.search.includes(q) ? '' : 'none';
-  });
-}
-let activeStatus = null;
+let activeStatusFilter = null;
+
 function filterByStatus(status, btn) {
-  activeStatus = status;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.history-card').forEach(c => {
-    c.style.display = (!status || c.dataset.status === status) ? '' : 'none';
+  activeStatusFilter = status;
+  document.querySelectorAll('#statusFilterChips .chip').forEach(c => c.style.fontWeight = 'normal');
+  btn.style.fontWeight = 'bold';
+  applyHistoryFilters();
+}
+
+function filterHistoryTable() {
+  applyHistoryFilters();
+}
+
+function applyHistoryFilters() {
+  const query = document.getElementById('histSearchInput').value.toLowerCase();
+  document.querySelectorAll('#historyTableBody tr').forEach(row => {
+    const rowStatus = row.getAttribute('data-status');
+    const rowText = row.getAttribute('data-text') || '';
+    const matchStatus = !activeStatusFilter || rowStatus === activeStatusFilter;
+    const matchText = !query || rowText.includes(query);
+    row.style.display = (matchStatus && matchText) ? '' : 'none';
   });
 }
 </script>

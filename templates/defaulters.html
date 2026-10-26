@@ -1,69 +1,83 @@
 {% extends "base.html" %}
 {% block title %}Attendance Radar – QueryMind Faculty{% endblock %}
+{% block breadcrumb %}Faculty / Attendance Radar{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <div class="role-badge-lg teacher-badge-lg" style="margin-bottom:8px;">📚 Faculty Academic Radar</div>
-    <h1>Attendance Defaulters <span class="gradient-text-amber">Radar</span></h1>
-    <p class="hero-sub">Students with cumulative attendance below the required 75% threshold.</p>
-  </div>
-  <div class="header-actions">
-    <a href="{{ url_for('dashboard') }}" class="btn-outline">
-      ← Back to Class Analytics
-    </a>
-  </div>
-</div>
+<div class="workspace-view">
 
-<div class="defaulter-alert-banner">
-  <div class="alert-icon">⚠️</div>
-  <div class="alert-text">
-    <strong>Mandatory Regulation:</strong> Students with attendance under 75% are ineligible for semester term exams without dean clearance. Total flagged students: <strong>{{ defaulters|length }}</strong>.
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-faculty);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-teacher">
+        📚 Faculty Academic Radar
+      </div>
+      <h1>Attendance <span style="color:var(--role-faculty);">Defaulters Radar</span></h1>
+      <p class="hero-sub">Students with cumulative recorded attendance strictly below the required 75.0% threshold.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Navigation</span>
+      <a href="{{ url_for('dashboard') }}" class="btn-query" style="background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border-subtle); margin-top:4px;">
+        ← Back to Analytics
+      </a>
+    </div>
   </div>
-</div>
 
-<div class="gov-card">
-  <div class="gov-card-header">
-    <h3>📋 Flagged Students (&lt; 75% Attendance)</h3>
-    <span class="badge-warning">{{ defaulters|length }} Defaulters</span>
+  <!-- Regulatory Policy Strip -->
+  <div class="flash-alert flash-warning" style="margin-bottom: 24px;">
+    <div class="flash-icon">⚠️</div>
+    <div class="flash-msg">
+      <strong>Institutional Policy Alert:</strong> Students with attendance under 75% are ineligible for semester term exams without faculty advisor clearance. Total flagged students: <strong>{{ defaulters|length }}</strong>.
+    </div>
   </div>
-  <div class="table-scroll">
-    <table class="result-table">
-      <thead>
-        <tr>
-          <th>Roll ID</th>
-          <th>Student Name</th>
-          <th>Division</th>
-          <th>Email Address</th>
-          <th>Average Attendance</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in defaulters %}
-        <tr>
-          <td><code>#{{ d.student_id }}</code></td>
-          <td style="font-weight:600;">{{ d.name }}</td>
-          <td><span class="division-pill">Div {{ d.division }}</span></td>
-          <td><a href="mailto:{{ d.email }}" class="email-link">{{ d.email }}</a></td>
-          <td>
-            <div class="att-bar-wrap">
-              <div class="att-bar-fill att-low" style="width: {{ d.avg_attendance }}%;"></div>
-              <span class="att-val text-rose">{{ d.avg_attendance }}%</span>
-            </div>
-          </td>
-          <td><span class="status-pill status-danger">Critical</span></td>
-          <td>
-            <form method="POST" action="{{ url_for('query') }}" style="display:inline;">
-              <input type="hidden" name="question" value="Show all students" />
-              <button type="submit" class="chip-sm">Details</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <!-- Flagged Students Table -->
+  <div class="gov-card">
+    <div class="gov-card-header">
+      <h3>Flagged Students (&lt; 75% Cumulative Attendance)</h3>
+      <span class="nav-meta-badge" style="background:#FEE2E2; color:#B91C1C;">{{ defaulters|length }} Defaulters</span>
+    </div>
+    <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Roll ID</th>
+            <th>Student Name</th>
+            <th>Division</th>
+            <th>Email Address</th>
+            <th>Attendance Rate</th>
+            <th>Standing</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in defaulters %}
+          <tr>
+            <td style="font-family:var(--font-mono);">STU00{{ d.student_id }}</td>
+            <td style="font-weight:600;">{{ d.name }}</td>
+            <td><span class="nav-meta-badge">Div {{ d.division }}</span></td>
+            <td><a href="mailto:{{ d.email }}" style="color:var(--accent-primary);">{{ d.email }}</a></td>
+            <td>
+              <div class="attendance-cell">
+                <div class="att-bar-bg" style="width:100px;">
+                  <div class="att-bar-fill att-bad" style="width: {{ d.avg_attendance }}%;"></div>
+                </div>
+                <span style="font-family:var(--font-mono); font-weight:600; color:var(--status-danger);">
+                  {{ "%.1f"|format(d.avg_attendance) }}%
+                </span>
+              </div>
+            </td>
+            <td><span class="nav-meta-badge" style="background:#FEF2F2; color:#991B1B;">At Risk</span></td>
+            <td>
+              <a href="{{ url_for('portal2') }}?q=Show+details+for+student+{{ d.name }}" class="chip" style="font-size:11px;">
+                Inspect Record
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
 </div>
 {% endblock %}

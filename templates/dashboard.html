@@ -1,444 +1,518 @@
 {% extends "base.html" %}
-{% block title %}Dashboard – QueryMind{% endblock %}
+{% block title %}
+  {% if role == 'student' %}Student Academic Overview
+  {% elif role in ('teacher', 'faculty') %}Faculty Class Analytics
+  {% else %}Enterprise System Governance{% endif %} – QueryMind
+{% endblock %}
+
+{% block breadcrumb %}
+  {% if role == 'student' %}Student / Academic Overview
+  {% elif role in ('teacher', 'faculty') %}Faculty / Class Analytics
+  {% else %}Administrator / System Overview{% endif %}
+{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
 
 {% block content %}
 
-{# ═══════════════════════════════════════════════════════════
-   ADMIN GOVERNANCE PORTAL
-   ═══════════════════════════════════════════════════════════ #}
-{% if role == 'admin' %}
+{# ═══════════════════════════════════════════════════════════════
+   1. STUDENT ACADEMIC OVERVIEW (Personal Academic Intelligence)
+   ═══════════════════════════════════════════════════════════════ #}
+{% if role == 'student' %}
+<div class="workspace-view student-workspace">
 
-<div class="role-hero admin-hero">
-  <div class="role-hero-left">
-    <div class="role-badge-lg admin-badge-lg">⚙️ Enterprise Data Governance</div>
-    <h1>System <span class="gradient-text-red">Administration</span></h1>
-    <p class="hero-sub">Full administrative oversight: SQL security governance, audit logs, and academic database.</p>
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-student);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-student">
+        🎓 Student Academic Profile · Aarav Sharma (STU001)
+      </div>
+      <h1>Personal <span style="color: var(--role-student);">Academic Intelligence</span></h1>
+      <p class="hero-sub">Division A · Enrolled in Bachelor of Science (Computer Science) · Verified Academic Semester 2024–2025.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Academic Status</span>
+      <span class="role-badge-lg badge-student" style="margin-top:4px;">Good Standing · Eligible</span>
+    </div>
   </div>
-  <div class="admin-system-stats">
-    <div class="sys-stat"><span class="sys-val sys-green">●</span> Engine Online</div>
-    <div class="sys-stat"><span class="sys-val">{{ stats.total_queries if stats else recent|length }}</span> System Queries</div>
-    <div class="sys-stat"><span class="sys-val">{{ stats.users if stats else 3 }}</span> App Users</div>
-    <div class="sys-stat"><span class="sys-val">{{ stats.datasets if stats else 0 }}</span> Datasets</div>
-    <div class="sys-stat"><span class="sys-val sys-red">{{ stats.blocked_queries if stats else 0 }}</span> Blocked</div>
-  </div>
-</div>
 
-<!-- Admin KPI Grid -->
-<div class="admin-kpi-grid">
-  <div class="kpi-card kpi-card-admin">
-    <div class="kpi-icon">👥</div>
-    <div class="kpi-info">
-      <span class="kpi-label">Registered Users</span>
-      <span class="kpi-number">{{ stats.users if stats else 3 }}</span>
-      <span class="kpi-sub">Roles: Admin, Teacher, Student</span>
-    </div>
-  </div>
-  <div class="kpi-card kpi-card-admin">
-    <div class="kpi-icon">🎓</div>
-    <div class="kpi-info">
-      <span class="kpi-label">Academic Records</span>
-      <span class="kpi-number">{{ stats.students if stats else 20 }} Students</span>
-      <span class="kpi-sub">{{ stats.marks_records if stats else 100 }} Marks Records</span>
-    </div>
-  </div>
-  <div class="kpi-card kpi-card-admin">
-    <div class="kpi-icon">📁</div>
-    <div class="kpi-info">
-      <span class="kpi-label">Custom Datasets</span>
-      <span class="kpi-number">{{ stats.datasets if stats else 0 }} Tables</span>
-      <span class="kpi-sub">CSV &amp; Excel Live Schema</span>
-    </div>
-  </div>
-  <div class="kpi-card kpi-card-admin">
-    <div class="kpi-icon">🛡️</div>
-    <div class="kpi-info">
-      <span class="kpi-label">Security &amp; AST Rules</span>
-      <span class="kpi-number">Zero-Trust Active</span>
-      <span class="kpi-sub">Strict Read-Only SELECT</span>
-    </div>
-  </div>
-</div>
-
-<!-- Admin Query Box -->
-<div class="query-card admin-card">
-  <div class="card-label admin-label">🔐 Admin SQL Execution Interface</div>
-  <form method="POST" action="{{ url_for('query') }}" id="queryForm">
-    <div class="query-input-group">
-      <div class="query-input-wrapper admin-input">
-        <span class="query-prefix">⚙️</span>
-        <input type="text" name="question" id="questionInput" class="query-input"
-          placeholder="Enter administrative inquiry or SQL question…" autocomplete="off" required />
-        <button type="submit" class="btn-query admin-query-btn" id="queryBtn">
-          <span class="btn-text">Execute</span>
-          <div class="btn-loader" style="display:none"><div class="spinner"></div></div>
-        </button>
+  <!-- Key Academic Metrics -->
+  <div class="admin-kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--role-student);">📊</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Average Marks (0–100 Scale)</span>
+        <span class="kpi-number">{{ "%.1f"|format(profile.avg_marks) if profile else "82.4" }}%</span>
+        <span class="kpi-sub">Calculated from 5 subjects</span>
       </div>
     </div>
-  </form>
-  <div class="suggestions">
-    <p class="suggestion-label">⚙️ Admin Quick Queries</p>
-    <div class="suggestion-chips">
-      <button class="chip admin-chip" onclick="ask(this)">Show all students</button>
-      <button class="chip admin-chip" onclick="ask(this)">Count students per division</button>
-      <button class="chip admin-chip" onclick="ask(this)">Compare average marks across divisions</button>
-      <button class="chip admin-chip" onclick="ask(this)">Average attendance of each division</button>
-      <button class="chip admin-chip" onclick="ask(this)">Show all subjects</button>
-      <button class="chip admin-chip" onclick="ask(this)">Min and max marks per subject</button>
-      <button class="chip admin-chip" onclick="ask(this)">Total credits</button>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--status-success);">⏱️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Overall Attendance</span>
+        <span class="kpi-number">{{ "%.1f"|format(profile.avg_attendance) if profile else "88.5" }}%</span>
+        <span class="kpi-sub" style="color:var(--status-success);">+13.5% above 75% threshold</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">📚</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Enrolled Courses</span>
+        <span class="kpi-number">5 Subjects</span>
+        <span class="kpi-sub">Total 18 Academic Credits</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">🛡️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Attendance Standing</span>
+        <span class="kpi-number" style="color:var(--status-success);">Satisfactory</span>
+        <span class="kpi-sub">Eligible for Semester Examination</span>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Admin Action Center Cards -->
-<div class="admin-actions-grid">
-  <a href="{{ url_for('datasets') }}" class="action-card action-blue">
-    <div class="action-icon">📁</div>
-    <div class="action-info">
-      <h3>Uploaded Datasets ({{ uploaded_datasets|length if uploaded_datasets else 0 }})</h3>
-      <p>Manage uploaded CSV/Excel tables, schema inspect, and query custom data</p>
-    </div>
-    <span class="action-arrow">→</span>
-  </a>
-  <a href="{{ url_for('audit') }}" class="action-card action-red">
-    <div class="action-icon">🛡️</div>
-    <div class="action-info">
-      <h3>Security &amp; Audit Logs</h3>
-      <p>Inspect authentication events, blocked AST queries, and user feedback</p>
-    </div>
-    <span class="action-arrow">→</span>
-  </a>
-  <a href="{{ url_for('users') }}" class="action-card action-purple">
-    <div class="action-icon">👥</div>
-    <div class="action-info">
-      <h3>User &amp; Schema Governance</h3>
-      <p>Inspect RBAC credentials, database table records, and masking policies</p>
-    </div>
-    <span class="action-arrow">→</span>
-  </a>
-  <a href="{{ url_for('export_csv') }}" class="action-card action-green">
-    <div class="action-icon">📤</div>
-    <div class="action-info">
-      <h3>Export System Data</h3>
-      <p>Download complete audit logs and query history as CSV</p>
-    </div>
-    <span class="action-arrow">→</span>
-  </a>
-</div>
-
-<!-- Uploaded Datasets Section -->
-<div class="gov-card" style="margin-top:24px;">
-  <div class="gov-card-header">
-    <h3>📁 Uploaded Datasets Library</h3>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <span class="gov-badge-green">{{ uploaded_datasets|length if uploaded_datasets else 0 }} Datasets Live</span>
-      <a href="{{ url_for('dataset_upload') }}" class="btn-query admin-query-btn" style="padding:6px 14px; font-size:0.8rem; text-decoration:none;">+ Upload Dataset</a>
-    </div>
-  </div>
-  <div style="padding:16px 20px;">
-    {% if uploaded_datasets %}
-    <div class="datasets-grid" style="margin-top:0;">
-      {% for ds in uploaded_datasets %}
-      <a href="{{ url_for('dataset_view', table_name=ds.table_name) }}" class="dataset-card">
-        <div class="dc-icon">📊</div>
-        <div class="dc-body">
-          <h3>{{ ds.display_name }}</h3>
-          <div class="dc-meta">
-            <span class="dc-tag">{{ ds.row_count }} rows</span>
-            <span class="dc-tag">{{ ds.col_count }} columns</span>
-            <span class="dc-tag">📅 {{ ds.uploaded_at[:16] }}</span>
-            <span class="dc-tag">👤 {{ ds.uploaded_by }}</span>
+  <!-- 12-Column Grid for Analytics Visualizations -->
+  <div class="twelve-col-grid" style="margin-bottom: 24px;">
+    
+    <!-- Subject Performance Chart (8 Cols) -->
+    <div class="col-span-8">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>Subject Marks Breakdown (0–100)</h3>
+          <span class="nav-meta-badge">Internal Assessments</span>
+        </div>
+        <div style="padding: 20px;">
+          <div style="height: 260px;">
+            <canvas id="studentMarksChart"></canvas>
           </div>
         </div>
-        <span class="dc-arrow">→</span>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div style="text-align:center; padding:24px; color:var(--text-muted);">
-      <p style="margin-bottom:12px;">No custom datasets uploaded yet. Upload a CSV or Excel file to get started.</p>
-      <a href="{{ url_for('dataset_upload') }}" class="btn-outline" style="display:inline-block;">⬆️ Upload First Dataset</a>
-    </div>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Recent Enterprise Activity -->
-{% if recent %}
-<div class="recent-section">
-  <h2 class="section-title">🕐 Enterprise Query Activity</h2>
-  <div class="recent-list">
-    {% for r in recent %}
-    <div class="recent-item status-bar-{{ r.status }}">
-      <span class="recent-status status-dot-{{ r.status }}">
-        {% if r.status == 'success' %}✅{% elif r.status == 'no_match' %}❓{% elif r.status == 'validation_failed' %}🛡{% else %}💥{% endif %}
-      </span>
-      <div class="recent-main">
-        <span class="recent-q">{{ r.question }}</span>
-        <span class="recent-user-tag">👤 {{ r.username or 'system' }}</span>
-      </div>
-      <span class="recent-meta">{{ r.result_row_count or 0 }} rows · {{ r.execution_time_ms or 0 }}ms</span>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-
-{# ═══════════════════════════════════════════════════════════
-   TEACHER / FACULTY PORTAL
-   ═══════════════════════════════════════════════════════════ #}
-{% elif role == 'teacher' %}
-
-<div class="role-hero teacher-hero">
-  <div class="role-hero-left">
-    <div class="role-badge-lg teacher-badge-lg">📚 Faculty Portal</div>
-    <h1>Class Analytics &amp; <span class="gradient-text-amber">Performance</span></h1>
-    <p class="hero-sub">Analyze division performance, track attendance defaulters, and query academic metrics.</p>
-  </div>
-  <div class="teacher-quick-stats">
-    <div class="tq-stat">
-      <div class="tq-val">20</div><div class="tq-label">Total Students</div>
-    </div>
-    <div class="tq-stat">
-      <div class="tq-val">3</div><div class="tq-label">Divisions (A, B, C)</div>
-    </div>
-    <div class="tq-stat">
-      <div class="tq-val">5</div><div class="tq-label">Courses</div>
-    </div>
-    <div class="tq-stat">
-      <div class="tq-val text-amber">{{ defaulters|length if defaulters else 0 }}</div><div class="tq-label">Defaulters (&lt;75%)</div>
-    </div>
-    <div class="tq-stat">
-      <div class="tq-val" style="color:#60a5fa;">{{ uploaded_datasets|length if uploaded_datasets else 0 }}</div><div class="tq-label">Custom Datasets</div>
-    </div>
-  </div>
-</div>
-
-<!-- Teacher Quick Action Cards -->
-<div class="teacher-actions-grid">
-  <a href="{{ url_for('defaulters') }}" class="teacher-action-card radar-card">
-    <div class="tac-icon">⚠️</div>
-    <div class="tac-body">
-      <h3>Attendance Radar</h3>
-      <p><strong>{{ defaulters|length if defaulters else 0 }} students</strong> below 75% attendance</p>
-    </div>
-    <span class="tac-btn">Inspect Radar →</span>
-  </a>
-
-  <div class="teacher-action-card division-card">
-    <div class="tac-icon">📊</div>
-    <div class="tac-body">
-      <h3>Division Overview</h3>
-      <div class="div-badges">
-        {% if div_stats %}
-          {% for d in div_stats %}
-            <span class="div-pill">Div {{ d.division }}: {{ d.avg_marks }} avg / {{ d.avg_attendance }}% att</span>
-          {% endfor %}
-        {% else %}
-          <span class="div-pill">Divisions A, B, C Active</span>
-        {% endif %}
       </div>
     </div>
-  </div>
 
-  <a href="{{ url_for('datasets') }}" class="teacher-action-card division-card" style="text-decoration:none;">
-    <div class="tac-icon">📁</div>
-    <div class="tac-body">
-      <h3>Uploaded Datasets ({{ uploaded_datasets|length if uploaded_datasets else 0 }})</h3>
-      <p>Browse and query custom research &amp; classroom datasets</p>
-    </div>
-    <span class="tac-btn">Browse →</span>
-  </a>
-</div>
-
-<!-- Teacher Query Box -->
-<div class="query-card teacher-card">
-  <div class="card-label teacher-label">📊 Faculty Class Query Console</div>
-  <form method="POST" action="{{ url_for('query') }}" id="queryForm">
-    <div class="query-input-group">
-      <div class="query-input-wrapper teacher-input">
-        <span class="query-prefix">📚</span>
-        <input type="text" name="question" id="questionInput" class="query-input"
-          placeholder="Ask about class averages, subject scores, or attendance…" autocomplete="off" required />
-        <button type="submit" class="btn-query teacher-query-btn" id="queryBtn">
-          <span class="btn-text">Analyse</span>
-          <div class="btn-loader" style="display:none"><div class="spinner"></div></div>
-        </button>
-      </div>
-    </div>
-  </form>
-  <div class="suggestions">
-    <p class="suggestion-label">📊 Recommended Faculty Queries</p>
-    <div class="suggestion-chips">
-      <button class="chip teacher-chip" onclick="ask(this)">Students with attendance below 75%</button>
-      <button class="chip teacher-chip" onclick="ask(this)">Top 5 students by average marks</button>
-      <button class="chip teacher-chip" onclick="ask(this)">Subjects with average score below 60</button>
-      <button class="chip teacher-chip" onclick="ask(this)">Compare average marks across divisions</button>
-      <button class="chip teacher-chip" onclick="ask(this)">Average attendance of each division</button>
-      <button class="chip teacher-chip" onclick="ask(this)">How many students scored above 80 in each subject</button>
-      <button class="chip teacher-chip" onclick="ask(this)">Average marks per subject</button>
-    </div>
-  </div>
-</div>
-
-<!-- Teacher Recent Queries -->
-{% if recent %}
-<div class="recent-section">
-  <h2 class="section-title">🕐 Your Faculty Inquiries</h2>
-  <div class="recent-list">
-    {% for r in recent %}
-    <div class="recent-item status-bar-{{ r.status }}">
-      <span class="recent-status">{% if r.status == 'success' %}✅{% else %}❌{% endif %}</span>
-      <span class="recent-q">{{ r.question }}</span>
-      <span class="recent-meta">{{ r.result_row_count or 0 }} rows</span>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-
-{# ═══════════════════════════════════════════════════════════
-   STUDENT PORTAL
-   ═══════════════════════════════════════════════════════════ #}
-{% else %}
-
-<div class="role-hero student-hero">
-  <div class="role-hero-left">
-    <div class="role-badge-lg student-badge-lg">🎓 Student Portal</div>
-    <h1>Welcome, <span class="gradient-text-emerald">{{ profile.info.name if profile else username }}</span>!</h1>
-    <p class="hero-sub">
-      Roll #{{ profile.info.student_id if profile else '1' }} · Division {{ profile.info.division if profile else 'A' }} · {{ profile.info.email if profile else 'student@college.edu' }}
-    </p>
-  </div>
-  <div class="student-quick-stats">
-    <div class="sq-stat">
-      <div class="sq-val text-emerald">{{ profile.avg_marks if profile else '84.2' }}</div>
-      <div class="sq-label">Cumulative GPA</div>
-    </div>
-    <div class="sq-stat">
-      <div class="sq-val text-cyan">{{ profile.avg_attendance if profile else '88.5' }}%</div>
-      <div class="sq-label">Attendance</div>
-    </div>
-    <div class="sq-stat">
-      <div class="sq-val text-purple">{{ profile.courses|length if profile else 5 }}</div>
-      <div class="sq-label">Enrolled Courses</div>
-    </div>
-  </div>
-</div>
-
-<!-- My Enrolled Courses Breakdown -->
-{% if profile and profile.courses %}
-<div class="student-courses-card">
-  <div class="gov-card-header">
-    <h3>📖 My Course Performance &amp; Attendance</h3>
-    <span class="gov-badge-green">Current Semester</span>
-  </div>
-  <div class="table-scroll">
-    <table class="result-table">
-      <thead>
-        <tr>
-          <th>Course Name</th>
-          <th>Credits</th>
-          <th>My Score</th>
-          <th>Attendance</th>
-          <th>Standing</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in profile.courses %}
-        <tr>
-          <td style="font-weight:600;">{{ c.subject_name }}</td>
-          <td>{{ c.credits }} Credits</td>
-          <td><span class="marks-score">{{ c.marks }} / 100</span></td>
-          <td>
-            <div class="att-bar-wrap">
-              <div class="att-bar-fill {% if c.attendance >= 75 %}att-good{% else %}att-low{% endif %}" style="width: {{ c.attendance }}%;"></div>
-              <span class="att-val">{{ c.attendance }}%</span>
+    <!-- Attendance Breakdown by Subject (4 Cols) -->
+    <div class="col-span-4">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>Subject Attendance</h3>
+          <span class="nav-meta-badge">Min 75%</span>
+        </div>
+        <div style="padding: 16px 20px;">
+          <div class="attendance-list">
+            <div class="att-row" style="margin-bottom: 14px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                <span>Mathematics</span>
+                <span>92%</span>
+              </div>
+              <div class="att-bar-bg"><div class="att-bar-fill att-good" style="width: 92%;"></div></div>
             </div>
-          </td>
-          <td>
-            {% if c.marks >= 75 %}
-              <span class="status-pill status-success">Distinction</span>
-            {% elif c.marks >= 50 %}
-              <span class="status-pill status-info">Good</span>
-            {% else %}
-              <span class="status-pill status-warning">Pass</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
-
-<!-- Student Query Box -->
-<div class="query-card student-card">
-  <div class="card-label student-label">💬 Ask Natural Language Academic Questions</div>
-  <form method="POST" action="{{ url_for('query') }}" id="queryForm">
-    <div class="query-input-group">
-      <div class="query-input-wrapper student-input">
-        <span class="query-prefix">💬</span>
-        <input type="text" name="question" id="questionInput" class="query-input"
-          placeholder="Ask in English: e.g. Show top 5 students by average marks…" autocomplete="off" required />
-        <button type="submit" class="btn-query student-query-btn" id="queryBtn">
-          <span class="btn-text">Ask Mind</span>
-          <div class="btn-loader" style="display:none"><div class="spinner"></div></div>
-        </button>
+            <div class="att-row" style="margin-bottom: 14px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                <span>Computer Science</span>
+                <span>95%</span>
+              </div>
+              <div class="att-bar-bg"><div class="att-bar-fill att-good" style="width: 95%;"></div></div>
+            </div>
+            <div class="att-row" style="margin-bottom: 14px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                <span>Physics</span>
+                <span>84%</span>
+              </div>
+              <div class="att-bar-bg"><div class="att-bar-fill att-good" style="width: 84%;"></div></div>
+            </div>
+            <div class="att-row" style="margin-bottom: 14px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                <span>Chemistry</span>
+                <span>86%</span>
+              </div>
+              <div class="att-bar-bg"><div class="att-bar-fill att-good" style="width: 86%;"></div></div>
+            </div>
+            <div class="att-row">
+              <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                <span>English</span>
+                <span>80%</span>
+              </div>
+              <div class="att-bar-bg"><div class="att-bar-fill att-good" style="width: 80%;"></div></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </form>
-  <div class="suggestions">
-    <p class="suggestion-label">💡 Recommended Questions for Students</p>
-    <div class="suggestion-chips">
-      <button class="chip student-chip" onclick="ask(this)">Show top 5 students by average marks</button>
-      <button class="chip student-chip" onclick="ask(this)">Average marks per subject</button>
-      <button class="chip student-chip" onclick="ask(this)">Show all subjects</button>
-      <button class="chip student-chip" onclick="ask(this)">Min and max marks per subject</button>
-      <button class="chip student-chip" onclick="ask(this)">Total credits</button>
-      <button class="chip student-chip" onclick="ask(this)">Average attendance of each division</button>
+  </div>
+
+  <!-- Student Query Launcher -->
+  <div class="query-card">
+    <div class="card-label">💬 Ask a Question About Your Academic Records</div>
+    <form method="POST" action="{{ url_for('query') }}" id="queryForm">
+      <div class="query-input-wrapper">
+        <span class="query-prefix">🔍</span>
+        <input type="text" name="question" id="questionInput" class="query-input"
+          placeholder="Ask anything: e.g. Show top 5 students by average marks, Average marks per subject…" required />
+        <button type="submit" class="btn-query">Ask Query</button>
+      </div>
+    </form>
+    <div class="suggestions">
+      <span class="suggestion-label">Suggested Academic Questions:</span>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="ask(this)">Show top 5 students by average marks</button>
+        <button class="chip" onclick="ask(this)">Average marks per subject</button>
+        <button class="chip" onclick="ask(this)">Show all subjects</button>
+        <button class="chip" onclick="ask(this)">Min and max marks per subject</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Student Data Governance Privacy Notice -->
-<div class="student-gov-notice">
-  <div class="sgn-icon">🔒</div>
-  <div class="sgn-text">
-    <strong>Academic Data Governance:</strong> You are browsing with <em>Student Read-Only Clearance</em>. Institutional credentials, audit logs, and teacher evaluations are protected under QueryMind governance policies.
-  </div>
 </div>
-
-<!-- Recent Student Inquiries -->
-{% if recent %}
-<div class="recent-section">
-  <h2 class="section-title">🕐 My Recent Questions</h2>
-  <div class="recent-list">
-    {% for r in recent %}
-    <div class="recent-item status-bar-{{ r.status }}">
-      <span class="recent-status">{% if r.status == 'success' %}✅{% else %}❌{% endif %}</span>
-      <span class="recent-q">{{ r.question }}</span>
-      <span class="recent-meta">{{ r.result_row_count or 0 }} rows</span>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-{% endif %}
 
 <script>
-function ask(btn) {
-  document.getElementById('questionInput').value = btn.textContent.trim();
-  document.getElementById('queryForm').submit();
-}
-document.getElementById('queryForm').addEventListener('submit', function() {
-  const btn = document.getElementById('queryBtn');
-  btn.querySelector('.btn-text').style.display = 'none';
-  btn.querySelector('.btn-loader').style.display = 'flex';
-  btn.disabled = true;
+document.addEventListener("DOMContentLoaded", function() {
+  const ctx = document.getElementById('studentMarksChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Mathematics', 'Physics', 'Chemistry', 'Computer Science', 'English'],
+        datasets: [{
+          label: 'Marks Scored',
+          data: [85, 78, 82, 92, 75],
+          backgroundColor: '#087F65',
+          borderRadius: 6,
+          barPercentage: 0.55
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: { color: '#E5E7EB' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
 });
 </script>
+
+{# ═══════════════════════════════════════════════════════════════
+   2. FACULTY CLASS ANALYTICS (Academic Operations Control)
+   ═══════════════════════════════════════════════════════════════ #}
+{% elif role in ('teacher', 'faculty') %}
+<div class="workspace-view faculty-workspace">
+
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-faculty);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-teacher">
+        👨‍🏫 Faculty Analytics · Prof. Sharma
+      </div>
+      <h1>Class <span style="color: var(--role-faculty);">Operations Intelligence</span></h1>
+      <p class="hero-sub">Multi-division academic monitoring, attendance radar, and dataset query intelligence across Divisions A, B, and C.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Faculty Action</span>
+      <a href="{{ url_for('defaulters') }}" class="btn-query" style="background:var(--role-faculty);">
+        Open Attendance Radar →
+      </a>
+    </div>
+  </div>
+
+  <!-- Operational KPIs -->
+  <div class="admin-kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--role-faculty);">👥</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Total Reviewed Students</span>
+        <span class="kpi-number">{{ stats.students if stats else 20 }} Students</span>
+        <span class="kpi-sub">Enrolled across 3 Divisions</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">🏛️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Active Divisions</span>
+        <span class="kpi-number">3 Divisions</span>
+        <span class="kpi-sub">Divisions A, B, and C</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--status-warning);">⚠️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Below 75% Attendance</span>
+        <span class="kpi-number" style="color:var(--status-warning);">{{ defaulters|length if defaulters else 3 }} Students</span>
+        <span class="kpi-sub">Attention required</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">📁</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Custom Datasets</span>
+        <span class="kpi-number">{{ uploaded_datasets|length if uploaded_datasets else 0 }} Tables</span>
+        <span class="kpi-sub">Imported CSV/Excel records</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Division Comparison Visualizations -->
+  <div class="twelve-col-grid" style="margin-bottom: 24px;">
+    
+    <!-- Division Performance Comparison (7 Cols) -->
+    <div class="col-span-7">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>Division Comparison: Average Marks &amp; Attendance</h3>
+          <span class="nav-meta-badge">Divisions A, B, C</span>
+        </div>
+        <div style="padding: 20px;">
+          <div style="height: 260px;">
+            <canvas id="divisionComparisonChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Defaulters Preview (5 Cols) -->
+    <div class="col-span-5">
+      <div class="gov-card">
+        <div class="gov-card-header">
+          <h3>Students Requiring Attendance Attention</h3>
+          <a href="{{ url_for('defaulters') }}" style="font-size:12px; color:var(--accent-primary); font-weight:600;">View All Radar →</a>
+        </div>
+        <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Div</th>
+                <th>Attendance</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if defaulters %}
+                {% for d in defaulters[:4] %}
+                <tr>
+                  <td><strong>{{ d.name }}</strong></td>
+                  <td>{{ d.division }}</td>
+                  <td>
+                    <span style="font-family:var(--font-mono); font-weight:600; color:var(--status-danger);">
+                      {{ "%.1f"|format(d.avg_attendance) }}%
+                    </span>
+                  </td>
+                  <td><span class="nav-meta-badge" style="background:#FEE2E2; color:#B91C1C;">Warning</span></td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No students below threshold.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Faculty Query Composer -->
+  <div class="query-card">
+    <div class="card-label">💬 Natural Language Faculty Query Console</div>
+    <form method="POST" action="{{ url_for('query') }}" id="queryForm">
+      <div class="query-input-wrapper">
+        <span class="query-prefix">💬</span>
+        <input type="text" name="question" id="questionInput" class="query-input"
+          placeholder="Ask questions about class patterns, attendance, or division comparisons…" required />
+        <button type="submit" class="btn-query">Run Query</button>
+      </div>
+    </form>
+    <div class="suggestions">
+      <span class="suggestion-label">Quick Faculty Inquiries:</span>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="ask(this)">Compare average marks across divisions</button>
+        <button class="chip" onclick="ask(this)">Average attendance of each division</button>
+        <button class="chip" onclick="ask(this)">Count students per division</button>
+        <button class="chip" onclick="ask(this)">Show students with attendance below 75%</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const ctx = document.getElementById('divisionComparisonChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Division A', 'Division B', 'Division C'],
+        datasets: [
+          {
+            label: 'Avg Marks',
+            data: [78.5, 74.2, 79.1],
+            backgroundColor: '#A46A18',
+            borderRadius: 5
+          },
+          {
+            label: 'Avg Attendance %',
+            data: [84.1, 79.6, 82.3],
+            backgroundColor: '#3658D4',
+            borderRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: { color: '#E5E7EB' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+});
+</script>
+
+{# ═══════════════════════════════════════════════════════════════
+   3. ADMINISTRATOR SYSTEM OVERVIEW (Governance & Data Operations)
+   ═══════════════════════════════════════════════════════════════ #}
+{% else %}
+<div class="workspace-view admin-workspace">
+
+  <!-- Header Banner -->
+  <div class="role-hero" style="border-left: 4px solid var(--role-admin);">
+    <div class="role-hero-left">
+      <div class="role-badge-lg badge-admin">
+        ⚙️ System Administration · Enterprise Governance
+      </div>
+      <h1>System <span style="color: var(--role-admin);">Operations Command</span></h1>
+      <p class="hero-sub">Deterministic SQL governance, AST policy enforcement, database telemetry, and uploaded dataset lifecycle management.</p>
+    </div>
+    <div class="dataset-switcher-box">
+      <span class="switcher-label">Engine Status</span>
+      <span class="role-badge-lg badge-student" style="margin-top:4px;">● Zero-Trust Online</span>
+    </div>
+  </div>
+
+  <!-- Operational KPIs -->
+  <div class="admin-kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Registered Accounts</span>
+        <span class="kpi-number">{{ stats.users if stats else 3 }} Accounts</span>
+        <span class="kpi-sub">Student, Faculty, Admin</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--accent-primary);">⚡</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Total System Queries</span>
+        <span class="kpi-number">{{ stats.total_queries if stats else recent|length }} Queries</span>
+        <span class="kpi-sub">Monitored in audit log</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">📁</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Live Datasets</span>
+        <span class="kpi-number">{{ stats.datasets if stats else (uploaded_datasets|length if uploaded_datasets else 0) }} Tables</span>
+        <span class="kpi-sub">CSV &amp; Excel Live Schemas</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="color:var(--status-danger);">🛡️</div>
+      <div class="kpi-info">
+        <span class="kpi-label">Blocked Statements</span>
+        <span class="kpi-number" style="color:var(--status-danger);">{{ stats.blocked_queries if stats else 0 }} Blocked</span>
+        <span class="kpi-sub">AST policy enforcement</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Query Telemetry Table -->
+  <div class="gov-card" style="margin-bottom: 24px;">
+    <div class="gov-card-header">
+      <h3>Recent Query Execution Telemetry</h3>
+      <a href="{{ url_for('history') }}" style="font-size:12px; color:var(--accent-primary); font-weight:600;">View Complete Log →</a>
+    </div>
+    <div class="table-container" style="border:none; border-radius:0; margin-bottom:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Rows</th>
+            <th>Execution</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent %}
+            {% for r in recent[:6] %}
+            <tr>
+              <td style="max-width:320px; font-weight:500;">{{ r.question }}</td>
+              <td><span class="nav-meta-badge">{{ r.username }}</span></td>
+              <td>
+                {% if r.status == 'success' %}
+                  <span class="nav-meta-badge" style="background:#EDFDF5; color:#065F46;">Success</span>
+                {% elif r.status == 'blocked' %}
+                  <span class="nav-meta-badge" style="background:#FEF2F2; color:#991B1B;">Blocked</span>
+                {% else %}
+                  <span class="nav-meta-badge" style="background:#FFFBEB; color:#92400E;">{{ r.status }}</span>
+                {% endif %}
+              </td>
+              <td style="font-family:var(--font-mono);">{{ r.row_count if r.row_count is not none else '—' }}</td>
+              <td style="font-family:var(--font-mono);">{{ r.execution_ms if r.execution_ms is not none else '—' }}ms</td>
+              <td style="font-size:11px; color:var(--text-muted);">{{ r.timestamp }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">No system queries logged yet.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Admin Query Composer -->
+  <div class="query-card">
+    <div class="card-label">⚙️ Administrator Natural-Language SQL Console</div>
+    <form method="POST" action="{{ url_for('query') }}" id="queryForm">
+      <div class="query-input-wrapper">
+        <span class="query-prefix">⚙️</span>
+        <input type="text" name="question" id="questionInput" class="query-input"
+          placeholder="Enter administrative inquiry or system question…" required />
+        <button type="submit" class="btn-query">Execute</button>
+      </div>
+    </form>
+    <div class="suggestions">
+      <span class="suggestion-label">Administrative Quick Queries:</span>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="ask(this)">Show all students</button>
+        <button class="chip" onclick="ask(this)">Count students per division</button>
+        <button class="chip" onclick="ask(this)">Show all subjects</button>
+        <button class="chip" onclick="ask(this)">Total credits</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
 {% endblock %}
