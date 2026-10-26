@@ -11,8 +11,8 @@ QueryMind empowers users to query an academic database by asking questions in or
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/12karthikpra-dev/DCDS-NLP.git
-cd DCDS-NLP
+git clone https://github.com/arjitujjawal-art/ai_Dcds.git
+cd ai_Dcds
 pip install -r requirements.txt
 ```
 
