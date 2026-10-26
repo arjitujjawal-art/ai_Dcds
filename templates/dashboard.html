@@ -18,6 +18,7 @@
     <div class="sys-stat"><span class="sys-val sys-green">●</span> Engine Online</div>
     <div class="sys-stat"><span class="sys-val">{{ stats.total_queries if stats else recent|length }}</span> System Queries</div>
     <div class="sys-stat"><span class="sys-val">{{ stats.users if stats else 3 }}</span> App Users</div>
+    <div class="sys-stat"><span class="sys-val">{{ stats.datasets if stats else 0 }}</span> Datasets</div>
     <div class="sys-stat"><span class="sys-val sys-red">{{ stats.blocked_queries if stats else 0 }}</span> Blocked</div>
   </div>
 </div>
@@ -41,19 +42,19 @@
     </div>
   </div>
   <div class="kpi-card kpi-card-admin">
+    <div class="kpi-icon">📁</div>
+    <div class="kpi-info">
+      <span class="kpi-label">Custom Datasets</span>
+      <span class="kpi-number">{{ stats.datasets if stats else 0 }} Tables</span>
+      <span class="kpi-sub">CSV &amp; Excel Live Schema</span>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card-admin">
     <div class="kpi-icon">🛡️</div>
     <div class="kpi-info">
       <span class="kpi-label">Security &amp; AST Rules</span>
       <span class="kpi-number">Zero-Trust Active</span>
       <span class="kpi-sub">Strict Read-Only SELECT</span>
-    </div>
-  </div>
-  <div class="kpi-card kpi-card-admin">
-    <div class="kpi-icon">📜</div>
-    <div class="kpi-info">
-      <span class="kpi-label">Audit Events</span>
-      <span class="kpi-number">{{ stats.audit_events if stats else 12 }}</span>
-      <span class="kpi-sub">Persistent Log Store</span>
     </div>
   </div>
 </div>
@@ -90,6 +91,14 @@
 
 <!-- Admin Action Center Cards -->
 <div class="admin-actions-grid">
+  <a href="{{ url_for('datasets') }}" class="action-card action-blue">
+    <div class="action-icon">📁</div>
+    <div class="action-info">
+      <h3>Uploaded Datasets ({{ uploaded_datasets|length if uploaded_datasets else 0 }})</h3>
+      <p>Manage uploaded CSV/Excel tables, schema inspect, and query custom data</p>
+    </div>
+    <span class="action-arrow">→</span>
+  </a>
   <a href="{{ url_for('audit') }}" class="action-card action-red">
     <div class="action-icon">🛡️</div>
     <div class="action-info">
@@ -114,6 +123,43 @@
     </div>
     <span class="action-arrow">→</span>
   </a>
+</div>
+
+<!-- Uploaded Datasets Section -->
+<div class="gov-card" style="margin-top:24px;">
+  <div class="gov-card-header">
+    <h3>📁 Uploaded Datasets Library</h3>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span class="gov-badge-green">{{ uploaded_datasets|length if uploaded_datasets else 0 }} Datasets Live</span>
+      <a href="{{ url_for('dataset_upload') }}" class="btn-query admin-query-btn" style="padding:6px 14px; font-size:0.8rem; text-decoration:none;">+ Upload Dataset</a>
+    </div>
+  </div>
+  <div style="padding:16px 20px;">
+    {% if uploaded_datasets %}
+    <div class="datasets-grid" style="margin-top:0;">
+      {% for ds in uploaded_datasets %}
+      <a href="{{ url_for('dataset_view', table_name=ds.table_name) }}" class="dataset-card">
+        <div class="dc-icon">📊</div>
+        <div class="dc-body">
+          <h3>{{ ds.display_name }}</h3>
+          <div class="dc-meta">
+            <span class="dc-tag">{{ ds.row_count }} rows</span>
+            <span class="dc-tag">{{ ds.col_count }} columns</span>
+            <span class="dc-tag">📅 {{ ds.uploaded_at[:16] }}</span>
+            <span class="dc-tag">👤 {{ ds.uploaded_by }}</span>
+          </div>
+        </div>
+        <span class="dc-arrow">→</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:24px; color:var(--text-muted);">
+      <p style="margin-bottom:12px;">No custom datasets uploaded yet. Upload a CSV or Excel file to get started.</p>
+      <a href="{{ url_for('dataset_upload') }}" class="btn-outline" style="display:inline-block;">⬆️ Upload First Dataset</a>
+    </div>
+    {% endif %}
+  </div>
 </div>
 
 <!-- Recent Enterprise Activity -->
@@ -162,6 +208,9 @@
     <div class="tq-stat">
       <div class="tq-val text-amber">{{ defaulters|length if defaulters else 0 }}</div><div class="tq-label">Defaulters (&lt;75%)</div>
     </div>
+    <div class="tq-stat">
+      <div class="tq-val" style="color:#60a5fa;">{{ uploaded_datasets|length if uploaded_datasets else 0 }}</div><div class="tq-label">Custom Datasets</div>
+    </div>
   </div>
 </div>
 
@@ -191,6 +240,15 @@
       </div>
     </div>
   </div>
+
+  <a href="{{ url_for('datasets') }}" class="teacher-action-card division-card" style="text-decoration:none;">
+    <div class="tac-icon">📁</div>
+    <div class="tac-body">
+      <h3>Uploaded Datasets ({{ uploaded_datasets|length if uploaded_datasets else 0 }})</h3>
+      <p>Browse and query custom research &amp; classroom datasets</p>
+    </div>
+    <span class="tac-btn">Browse →</span>
+  </a>
 </div>
 
 <!-- Teacher Query Box -->

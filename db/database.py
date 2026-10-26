@@ -303,6 +303,7 @@ def get_system_stats():
         "success_queries": c.execute("SELECT COUNT(*) FROM query_logs WHERE status='success'").fetchone()[0],
         "blocked_queries": c.execute("SELECT COUNT(*) FROM query_logs WHERE status IN ('validation_failed', 'no_match')").fetchone()[0],
         "audit_events": c.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0],
+        "datasets": c.execute("SELECT COUNT(*) FROM dataset_registry").fetchone()[0] if c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dataset_registry'").fetchone() else 0,
     }
     conn.close()
     return stats
@@ -387,6 +388,191 @@ def get_student_profile(username="student1"):
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# DATASET UPLOAD — Dynamic Table Management
+# ══════════════════════════════════════════════════════════════════════════════
+
+import re as _re
+import pandas as _pd
+
+
+_SYSTEM_TABLES = {"app_users", "students", "subjects", "marks", "attendance",
+                  "query_logs", "audit_logs", "query_feedback", "sqlite_sequence",
+                  "dataset_registry"}
+
+
+def _setup_registry():
+    """Create the dataset registry table if it doesn't exist."""
+    conn = _conn()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS dataset_registry (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_name   TEXT NOT NULL UNIQUE,
+            display_name TEXT NOT NULL,
+            row_count    INTEGER DEFAULT 0,
+            col_count    INTEGER DEFAULT 0,
+            columns_json TEXT,
+            uploaded_by  TEXT,
+            uploaded_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def _safe_table_name(original: str) -> str:
+    """Convert any string to a safe SQLite table name."""
+    name = _re.sub(r"[^\w]", "_", original.lower())
+    name = _re.sub(r"_+", "_", name).strip("_")
+    if not name or name[0].isdigit():
+        name = "ds_" + name
+    return name[:50]
+
+
+def import_dataframe(df: "_pd.DataFrame", table_name: str, display_name: str,
+                     uploaded_by: str = "admin") -> dict:
+    """
+    Given a pandas DataFrame, create a SQLite table and populate it.
+    Returns a result dict with row_count, columns, and table_name.
+    """
+    import json
+
+    # Sanitise column names
+    df.columns = [_safe_table_name(str(c)) for c in df.columns]
+
+    # Ensure unique table name (append _2, _3 if needed)
+    base = _safe_table_name(table_name)
+    candidate = base
+    conn = _conn()
+    existing = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    i = 2
+    while candidate in existing:
+        candidate = f"{base}_{i}"
+        i += 1
+    table_name_safe = candidate
+    conn.close()
+
+    # Write DataFrame to SQLite (pandas does the CREATE TABLE + INSERT)
+    conn_raw = __import__("sqlite3").connect(DB_PATH)
+    df.to_sql(table_name_safe, conn_raw, if_exists="replace", index=False)
+    conn_raw.close()
+
+    # Register the dataset
+    col_info = [{"name": c, "dtype": str(df[c].dtype)} for c in df.columns]
+    conn = _conn()
+    conn.execute("""
+        INSERT OR REPLACE INTO dataset_registry
+          (table_name, display_name, row_count, col_count, columns_json, uploaded_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (table_name_safe, display_name, len(df), len(df.columns),
+          json.dumps(col_info), uploaded_by))
+    conn.commit()
+    conn.close()
+
+    return {
+        "table_name": table_name_safe,
+        "display_name": display_name,
+        "row_count": len(df),
+        "columns": list(df.columns),
+        "col_info": col_info,
+    }
+
+
+def upload_csv_excel(file_bytes: bytes, filename: str, uploaded_by: str = "admin") -> dict:
+    """
+    Accept raw file bytes from a CSV or Excel upload.
+    Auto-detects format from filename extension.
+    Returns result from import_dataframe().
+    """
+    import io
+    display_name = filename.rsplit(".", 1)[0]
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "csv"
+
+    try:
+        if ext in ("xlsx", "xls"):
+            df = _pd.read_excel(io.BytesIO(file_bytes), engine="openpyxl")
+        else:
+            # Try comma first, fallback to tab
+            try:
+                df = _pd.read_csv(io.BytesIO(file_bytes), encoding="utf-8")
+            except Exception:
+                df = _pd.read_csv(io.BytesIO(file_bytes), sep="\t", encoding="utf-8")
+    except Exception as exc:
+        return {"error": str(exc)}
+
+    if df.empty:
+        return {"error": "The uploaded file contains no data."}
+
+    # Drop fully empty columns/rows
+    df = df.dropna(axis=1, how="all").dropna(axis=0, how="all")
+
+    table_name_hint = _safe_table_name(display_name)
+    return import_dataframe(df, table_name_hint, display_name, uploaded_by)
+
+
+def get_uploaded_datasets() -> list:
+    """Return all user-uploaded datasets from the registry."""
+    _setup_registry()
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT * FROM dataset_registry ORDER BY id DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_dataset_schema(table_name: str) -> dict | None:
+    """Return column info and a sample row preview for a dataset table."""
+    import json
+    _setup_registry()
+    conn = _conn()
+    reg = conn.execute(
+        "SELECT * FROM dataset_registry WHERE table_name = ?", (table_name,)
+    ).fetchone()
+    if not reg:
+        conn.close()
+        return None
+    reg = dict(reg)
+    reg["col_info"] = json.loads(reg["columns_json"] or "[]")
+
+    # Sample rows
+    try:
+        sample = conn.execute(f'SELECT * FROM "{table_name}" LIMIT 5').fetchall()
+        cols = [d[0] for d in conn.execute(f'SELECT * FROM "{table_name}" LIMIT 1').description or []]
+        reg["sample_rows"] = [dict(zip(cols, r)) for r in sample]
+        reg["all_columns"] = cols
+    except Exception:
+        reg["sample_rows"] = []
+        reg["all_columns"] = []
+
+    conn.close()
+    return reg
+
+
+def delete_dataset(table_name: str) -> bool:
+    """Drop a user-uploaded dataset table and remove its registry entry."""
+    if table_name in _SYSTEM_TABLES:
+        return False
+    try:
+        conn = _conn()
+        conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+        conn.execute("DELETE FROM dataset_registry WHERE table_name = ?", (table_name,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+
+def get_dataset_table_names() -> set:
+    """Return names of all registered dataset tables (for NLP routing)."""
+    _setup_registry()
+    conn = _conn()
+    rows = conn.execute("SELECT table_name FROM dataset_registry").fetchall()
+    conn.close()
+    return {r[0] for r in rows}
+
+
 # ── Auto-setup on import ───────────────────────────────────────────────────────
 _setup()
-
+_setup_registry()

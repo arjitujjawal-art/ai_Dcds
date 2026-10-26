@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}My Datasets – QueryMind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="role-badge-lg {{ 'admin-badge-lg' if role == 'admin' else 'teacher-badge-lg' }}" style="margin-bottom:8px;">
+      🗂️ Dataset Library
+    </div>
+    <h1>Uploaded <span class="{{ 'gradient-text-red' if role == 'admin' else 'gradient-text-amber' }}">Datasets</span></h1>
+    <p class="hero-sub">All CSV and Excel datasets uploaded to QueryMind — click any to browse and query it.</p>
+  </div>
+  <a href="{{ url_for('dataset_upload') }}" class="{{ 'admin-query-btn' if role == 'admin' else 'teacher-query-btn' }} btn-query" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:10px 20px;">
+    ⬆️ Upload New Dataset
+  </a>
+</div>
+
+{% if datasets %}
+<div class="datasets-grid">
+  {% for ds in datasets %}
+  <a href="{{ url_for('dataset_view', table_name=ds.table_name) }}" class="dataset-card">
+    <div class="dc-icon">📊</div>
+    <div class="dc-body">
+      <h3>{{ ds.display_name }}</h3>
+      <div class="dc-meta">
+        <span class="dc-tag">{{ ds.row_count }} rows</span>
+        <span class="dc-tag">{{ ds.col_count }} columns</span>
+        <span class="dc-tag">📅 {{ ds.uploaded_at[:16] }}</span>
+        <span class="dc-tag">👤 {{ ds.uploaded_by }}</span>
+      </div>
+    </div>
+    <span class="dc-arrow">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-datasets">
+  <div class="ed-icon">📁</div>
+  <h3>No Datasets Uploaded Yet</h3>
+  <p>Upload a CSV or Excel file to get started. QueryMind will auto-detect columns and make the data instantly queryable.</p>
+  <a href="{{ url_for('dataset_upload') }}" class="btn-query" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:10px 24px; margin-top:16px;">
+    ⬆️ Upload First Dataset
+  </a>
+</div>
+{% endif %}
+{% endblock %}

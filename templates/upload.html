@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Upload Dataset – QueryMind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="role-badge-lg {{ 'admin-badge-lg' if role == 'admin' else 'teacher-badge-lg' }}" style="margin-bottom:8px;">
+      📁 Dataset Upload
+    </div>
+    <h1>Upload a <span class="{{ 'gradient-text-red' if role == 'admin' else 'gradient-text-amber' }}">New Dataset</span></h1>
+    <p class="hero-sub">Upload any CSV or Excel file — QueryMind will auto-detect columns and make it instantly queryable in plain English.</p>
+  </div>
+  <a href="{{ url_for('datasets') }}" class="btn-outline">← All Datasets</a>
+</div>
+
+<!-- Upload Card -->
+<div class="upload-zone-card">
+  <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{{ url_for('dataset_upload') }}">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="dz-icon">📂</div>
+      <h3 class="dz-title">Drag &amp; Drop your file here</h3>
+      <p class="dz-sub">or <span class="dz-link">click to browse</span></p>
+      <p class="dz-formats">Supports: <strong>CSV</strong>, <strong>Excel (.xlsx)</strong>, <strong>Excel (.xls)</strong></p>
+      <div class="dz-preview" id="dzPreview" style="display:none;">
+        <span class="dz-file-icon">📄</span>
+        <span class="dz-file-name" id="dzFileName"></span>
+        <span class="dz-file-size" id="dzFileSize"></span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="previewFile(this)" />
+    <button type="submit" class="btn-upload {{ 'btn-upload-admin' if role == 'admin' else 'btn-upload-teacher' }}" id="uploadBtn">
+      <span id="uploadBtnText">⬆️ Upload &amp; Analyse Dataset</span>
+      <span id="uploadBtnSpinner" style="display:none;">⏳ Processing...</span>
+    </button>
+  </form>
+</div>
+
+<!-- Supported Patterns -->
+<div class="gov-card" style="margin-top:28px;">
+  <div class="gov-card-header">
+    <h3>🧠 Queries That Work on Any Dataset</h3>
+    <span class="gov-badge-green">Versatile NLP</span>
+  </div>
+  <div class="pattern-grid">
+    <div class="pattern-item"><div class="pi-icon">🔍</div><div class="pi-body"><h4>Show All Records</h4><p>"Show all", "List everything", "Display records"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">🏆</div><div class="pi-body"><h4>Top N</h4><p>"Top 10 by salary", "Highest 5 values"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">📊</div><div class="pi-body"><h4>Group &amp; Count</h4><p>"Count by category", "Group by department"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">📐</div><div class="pi-body"><h4>Averages</h4><p>"Average score", "Mean salary by department"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">➕</div><div class="pi-body"><h4>Sum / Total</h4><p>"Total revenue", "Sum of amounts"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">🔼</div><div class="pi-body"><h4>Filter Above / Below</h4><p>"Records above 80", "Values below 50"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">📉</div><div class="pi-body"><h4>Min &amp; Max</h4><p>"Min and max marks", "Maximum value"</p></div></div>
+    <div class="pattern-item"><div class="pi-icon">📋</div><div class="pi-body"><h4>Distribution</h4><p>Ask about any column name directly</p></div></div>
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dz-hover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dz-hover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dz-hover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('fileInput').files = e.dataTransfer.files;
+    previewFile({ files: e.dataTransfer.files });
+  }
+});
+
+function previewFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('dzFileName').textContent = file.name;
+  document.getElementById('dzFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  document.getElementById('dzPreview').style.display = 'flex';
+  document.querySelector('.dz-title').textContent = 'File ready to upload';
+}
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+  document.getElementById('uploadBtnText').style.display = 'none';
+  document.getElementById('uploadBtnSpinner').style.display = 'inline';
+  document.getElementById('uploadBtn').disabled = true;
+});
+</script>
+{% endblock %}

@@ -146,3 +146,37 @@ class TestSqlValidator:
         )
         r = validate_sql(sql)
         assert r["valid"] is True
+
+
+# ══════════════════════════════════════════════════════
+# Dataset Upload & NLP Tests
+# ══════════════════════════════════════════════════════
+
+class TestDatasetManagement:
+
+    def test_csv_upload_and_query(self):
+        from db.database import upload_csv_excel, get_uploaded_datasets, get_dataset_schema, delete_dataset, execute_query
+        from nlp.sql_generator import generate_sql_for_dataset
+
+        csv_data = "item_id,product_name,category,price,stock\n1,Laptop,Electronics,1200,15\n2,Desk,Furniture,350,8\n3,Headphones,Electronics,150,45\n"
+        res = upload_csv_excel(csv_data.encode("utf-8"), "inventory_test.csv", uploaded_by="admin")
+        assert "table_name" in res
+        tbl = res["table_name"]
+
+        try:
+            datasets = get_uploaded_datasets()
+            assert any(d["table_name"] == tbl for d in datasets)
+
+            schema = get_dataset_schema(tbl)
+            assert "price" in schema["all_columns"]
+
+            nlp = generate_sql_for_dataset("top 2 by price", tbl, schema["all_columns"])
+            assert nlp["matched"] is True
+            assert "price" in nlp["sql"].lower()
+
+            res_q = execute_query(nlp["sql"])
+            assert res_q["error"] is None
+            assert res_q["row_count"] == 2
+        finally:
+            delete_dataset(tbl)
+

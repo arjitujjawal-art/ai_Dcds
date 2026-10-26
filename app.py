@@ -7,6 +7,7 @@ import os
 import csv
 import io
 import json
+import re
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -14,7 +15,7 @@ from flask import (
 )
 
 # ── Local imports ─────────────────────────────────────────────────────────────
-from nlp.sql_generator import generate_sql
+from nlp.sql_generator import generate_sql, generate_sql_for_dataset
 from nlp.sql_validator  import validate_sql
 from db.database import (
     get_user,
@@ -31,6 +32,11 @@ from db.database import (
     get_division_stats,
     get_defaulters,
     get_student_profile,
+    upload_csv_excel,
+    get_uploaded_datasets,
+    get_dataset_schema,
+    delete_dataset,
+    execute_query,
 )
 
 # ─── App ──────────────────────────────────────────────────────────────────────
@@ -146,6 +152,10 @@ def dashboard():
     div_stats = None
     defaulters = None
     profile = None
+    uploaded_datasets = None
+
+    if role in ("admin", "teacher"):
+        uploaded_datasets = get_uploaded_datasets()
 
     if role == "admin":
         stats = get_system_stats()
@@ -167,6 +177,7 @@ def dashboard():
         div_stats=div_stats,
         defaulters=defaulters,
         profile=profile,
+        uploaded_datasets=uploaded_datasets,
     )
 
 
@@ -183,6 +194,33 @@ def query():
 
     # 1. NLP → SQL
     nlp = generate_sql(question)
+    
+    # If standard academic patterns did not match, check uploaded datasets
+    if not nlp["matched"]:
+        all_ds = get_uploaded_datasets()
+        for ds in all_ds:
+            name_words = [w.lower() for w in re.findall(r"\w+", ds["display_name"])]
+            tbl_words  = [w.lower() for w in re.findall(r"\w+", ds["table_name"])]
+            q_lower    = question.lower()
+            if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
+                schema = get_dataset_schema(ds["table_name"])
+                if schema:
+                    cols = schema.get("all_columns", [])
+                    candidate = generate_sql_for_dataset(question, ds["table_name"], cols)
+                    if candidate.get("matched"):
+                        nlp = candidate
+                        nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                        break
+        # If still not matched and there's only 1 uploaded dataset, try matching it
+        if not nlp["matched"] and len(all_ds) == 1:
+            schema = get_dataset_schema(all_ds[0]["table_name"])
+            if schema:
+                cols = schema.get("all_columns", [])
+                candidate = generate_sql_for_dataset(question, all_ds[0]["table_name"], cols)
+                if candidate.get("matched"):
+                    nlp = candidate
+                    nlp["description"] = f"{nlp['description']} [{all_ds[0]['display_name']}]"
+
     sql = nlp["sql"]
 
     if not nlp["matched"]:
@@ -324,6 +362,135 @@ def health():
     import os
     from db.database import DB_PATH
     return jsonify({"sqlite": os.path.exists(DB_PATH), "status": "ok"})
+
+
+# ── Dataset Upload & Browser ─────────────────────────────────────────────────
+
+@app.route("/datasets")
+@login_required
+def datasets():
+    if session.get("role") not in ("admin", "teacher"):
+        flash("Dataset management requires faculty or admin access.", "danger")
+        return redirect(url_for("dashboard"))
+    all_ds = get_uploaded_datasets()
+    return render_template("datasets.html", datasets=all_ds, role=session["role"])
+
+
+@app.route("/datasets/upload", methods=["GET", "POST"])
+@login_required
+def dataset_upload():
+    if session.get("role") not in ("admin", "teacher"):
+        flash("Dataset upload requires faculty or admin access.", "danger")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        f = request.files.get("file")
+        if not f or not f.filename:
+            flash("No file selected.", "warning")
+            return redirect(request.url)
+
+        filename = f.filename
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext not in ("csv", "xlsx", "xls"):
+            flash("Only CSV or Excel (.xlsx/.xls) files are supported.", "danger")
+            return redirect(request.url)
+
+        file_bytes = f.read()
+        result = upload_csv_excel(file_bytes, filename, uploaded_by=session["username"])
+
+        if "error" in result:
+            flash(f"Upload failed: {result['error']}", "danger")
+            return redirect(request.url)
+
+        log_audit("dataset_upload", session["user_id"], session["username"],
+                  details={"file": filename, "table": result["table_name"],
+                           "rows": result["row_count"]})
+        flash(f"✅ Dataset '{result['display_name']}' uploaded! {result['row_count']} rows, "
+              f"{len(result['columns'])} columns.", "success")
+        return redirect(url_for("dataset_view", table_name=result["table_name"]))
+
+    return render_template("upload.html", role=session["role"])
+
+
+@app.route("/datasets/<table_name>")
+@login_required
+def dataset_view(table_name):
+    schema = get_dataset_schema(table_name)
+    if not schema:
+        flash("Dataset not found.", "danger")
+        return redirect(url_for("datasets"))
+    return render_template("dataset_view.html", schema=schema,
+                           role=session["role"], table_name=table_name)
+
+
+@app.route("/datasets/<table_name>/query", methods=["POST"])
+@login_required
+def dataset_query(table_name):
+    schema = get_dataset_schema(table_name)
+    if not schema:
+        flash("Dataset not found.", "danger")
+        return redirect(url_for("datasets"))
+
+    question = request.form.get("question", "").strip()
+    if not question:
+        return redirect(url_for("dataset_view", table_name=table_name))
+
+    columns = schema.get("all_columns", [])
+    nlp = generate_sql_for_dataset(question, table_name, columns)
+    sql  = nlp["sql"]
+
+    # Validate (allow the dataset table through, block system tables)
+    v = validate_sql(sql, session["role"])
+    if not v["valid"]:
+        log_query(session["user_id"], session["username"],
+                  question, sql, "validation_failed", 0, 0, error=v["reason"])
+        return render_template("result.html",
+            question=question,
+            error=f"Query blocked: {v['reason']}",
+            sql=sql, columns=[], rows=[], chart_json=None)
+
+    result = execute_query(sql)
+    if result["error"]:
+        log_query(session["user_id"], session["username"],
+                  question, sql, "db_error",
+                  result["execution_ms"], 0, error=result["error"])
+        return render_template("result.html",
+            question=question, error=result["error"],
+            sql=sql, columns=result["columns"], rows=[], chart_json=None)
+
+    log_query(session["user_id"], session["username"],
+              question, sql, "success",
+              result["execution_ms"], result["row_count"])
+
+    chart = make_chart(result["columns"], result["rows"])
+    return render_template("result.html",
+        question=question,
+        description=f"{nlp['description']} [{schema['display_name']}]",
+        sql=sql,
+        columns=result["columns"],
+        rows=result["rows"],
+        row_count=result["row_count"],
+        exec_ms=result["execution_ms"],
+        chart_json=json.dumps(chart) if chart else None,
+        error=None,
+    )
+
+
+@app.route("/datasets/<table_name>/delete", methods=["POST"])
+@login_required
+def dataset_delete(table_name):
+    if session.get("role") != "admin":
+        flash("Only admins can delete datasets.", "danger")
+        return redirect(url_for("dataset_view", table_name=table_name))
+    from db.database import delete_dataset as _del
+    ok = _del(table_name)
+    if ok:
+        log_audit("dataset_delete", session["user_id"], session["username"],
+                  details={"table": table_name})
+        flash(f"Dataset '{table_name}' deleted.", "success")
+    else:
+        flash("Cannot delete system tables.", "danger")
+    return redirect(url_for("datasets"))
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────

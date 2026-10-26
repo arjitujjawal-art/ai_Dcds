@@ -40,6 +40,12 @@
         <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
           <span>⚙️</span> Dashboard
         </a>
+        <a href="{{ url_for('datasets') }}" class="nav-link {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
+          <span>📁</span> Datasets
+        </a>
+        <a href="{{ url_for('dataset_upload') }}" class="nav-link {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
+          <span>📥</span> Upload Dataset
+        </a>
         <a href="{{ url_for('audit') }}" class="nav-link {% if request.endpoint == 'audit' %}active{% endif %}">
           <span>🛡️</span> Security &amp; Audit
         </a>
@@ -55,6 +61,12 @@
       {% elif session.role == 'teacher' %}
         <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
           <span>📊</span> Class Analytics
+        </a>
+        <a href="{{ url_for('datasets') }}" class="nav-link {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
+          <span>📁</span> Datasets
+        </a>
+        <a href="{{ url_for('dataset_upload') }}" class="nav-link {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
+          <span>📥</span> Upload Dataset
         </a>
         <a href="{{ url_for('defaulters') }}" class="nav-link {% if request.endpoint == 'defaulters' %}active{% endif %}">
           <span>⚠️</span> Attendance Radar
