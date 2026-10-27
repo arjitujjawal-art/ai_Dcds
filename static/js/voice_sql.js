@@ -252,20 +252,48 @@ async function triggerGenerateSql() {
 
     const data = await res.json();
 
-    if (data.sql) {
-      const sqlEditor = document.getElementById('sqlEditor');
+    const sqlEditor = document.getElementById('sqlEditor');
+    const descTag = document.getElementById('queryIntentDesc');
+    const astBadge = document.getElementById('astGovernanceBadge');
+    const astText = document.getElementById('astBadgeText');
+    const planDrawer = document.getElementById('planDrawer');
+
+    if (data.status === 'success' && data.sql) {
       if (sqlEditor) sqlEditor.value = data.sql;
-
-      const descTag = document.getElementById('queryIntentDesc');
       if (descTag) descTag.textContent = data.description || 'Schema Matched';
-
       if (statusMsg) statusMsg.textContent = 'SQL generated successfully! Review below before running.';
 
       // Pre-validate via AST check
       triggerValidateSql(false);
     } else {
-      if (statusMsg) statusMsg.textContent = data.description || 'Could not understand intent. Try phrasing differently.';
-      showValidationFeedback(data.description || 'Unrecognized query intent. Please try rephrasing or inspect the sample suggestions.', 'warning');
+      // Clear any previous SQL to prevent stale execution
+      if (sqlEditor) sqlEditor.value = '';
+      if (descTag) descTag.textContent = 'Awaiting Valid Query';
+
+      // Reset AST Badge to unvalidated state
+      if (astBadge && astText) {
+        astBadge.className = 'ast-badge';
+        astText.textContent = 'AST Gateway: Awaiting Query';
+      }
+
+      // Hide execution plan drawer
+      if (planDrawer) planDrawer.classList.add('hidden');
+
+      const message = data.message || data.description || 'Please ask a question about the connected database.';
+      if (statusMsg) statusMsg.textContent = message;
+
+      let feedbackType = 'warning';
+      if (data.status === 'out_of_scope') feedbackType = 'info';
+      else if (data.status === 'unsupported') feedbackType = 'danger';
+
+      let suggestionsHtml = '';
+      if (data.suggestions && data.suggestions.length > 0) {
+        suggestionsHtml = '<div style="margin-top: 8px; font-size: 11px;"><strong>Suggestions:</strong> ' +
+          data.suggestions.map(s => `<a href="javascript:void(0)" onclick="applySuggestion('${escapeHtml(s)}')" style="text-decoration: underline; margin-right: 8px; color: inherit;">"${escapeHtml(s)}"</a>`).join(' ') +
+          '</div>';
+      }
+
+      showValidationFeedback(message + suggestionsHtml, feedbackType);
     }
   } catch (err) {
     console.error('Error generating SQL:', err);

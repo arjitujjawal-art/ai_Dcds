@@ -18,6 +18,14 @@ import edge_tts
 
 # ── Local imports ─────────────────────────────────────────────────────────────
 from nlp.sql_generator import generate_sql, generate_sql_for_dataset
+from nlp.intent_classifier import (
+    classify_intent,
+    DATABASE_QUERY,
+    AMBIGUOUS_QUERY,
+    OUT_OF_SCOPE,
+    UNSUPPORTED_OPERATION,
+    EMPTY_INPUT,
+)
 from nlp.sql_validator  import validate_sql
 from nlp.speech_narrator import DataToSpeechNarrator
 from db.analyzer import auto_analyze_dataset
@@ -443,6 +451,14 @@ def query():
             "confidence": 1.0
         }
     else:
+        # Intent classification check
+        intent_res = classify_intent(question)
+        if intent_res["classification"] != DATABASE_QUERY:
+            return render_template("result.html",
+                question=question, error=intent_res["message"],
+                sql=None, columns=[], rows=[], chart_json=None,
+                verbal_summary=intent_res["message"])
+
         nlp = generate_sql(question)
     
     # If standard academic patterns did not match, check uploaded datasets
@@ -880,46 +896,106 @@ def transcribe_audio():
 @app.route("/api/generate-sql", methods=["POST"])
 def api_generate_sql():
     """
-    Schema-aware natural language to SQL translation endpoint.
-    Translates intent into a deterministic SQL statement without executing it.
+    Schema-aware natural language to SQL translation endpoint with explicit
+    intent classification (DATABASE_QUERY, AMBIGUOUS_QUERY, OUT_OF_SCOPE,
+    UNSUPPORTED_OPERATION, EMPTY_INPUT).
     """
     data = request.get_json(silent=True) or {}
     question = data.get("question", "").strip()
     table_name = data.get("table_name", "").strip()
-    if not question:
-        return jsonify({"error": "Empty question received."}), 400
 
-    # Custom dataset table
+    # Discover known schema entities
+    known_tables = ["students", "subjects", "marks", "attendance"]
+    known_columns = [
+        "student_id", "name", "division", "email",
+        "subject_id", "subject_name", "credits", "department",
+        "mark_id", "marks",
+        "attendance_id", "attendance_percentage", "attended", "total_classes"
+    ]
+    all_ds = []
+    try:
+        all_ds = get_uploaded_datasets()
+        for ds in all_ds:
+            known_tables.append(ds["table_name"])
+            schema = get_dataset_schema(ds["table_name"])
+            if schema and "all_columns" in schema:
+                known_columns.extend(schema["all_columns"])
+    except Exception:
+        pass
+
+    # 1. Intent Classification Stage
+    intent_res = classify_intent(question, known_tables=known_tables, known_columns=known_columns)
+
+    if intent_res["classification"] != DATABASE_QUERY:
+        return jsonify({
+            "status": intent_res["status"],
+            "classification": intent_res["classification"],
+            "intent": None,
+            "sql": None,
+            "matched": False,
+            "message": intent_res["message"],
+            "suggestions": intent_res["suggestions"],
+            "description": intent_res["message"]
+        })
+
+    # 2. Schema-Aware Relational SQL Generation
+    nlp = None
+
+    # Custom dataset table specified
     if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
         schema = get_dataset_schema(table_name)
         if schema:
             cols = schema.get("all_columns", [])
-            nlp = generate_sql_for_dataset(question, table_name, cols)
-            return jsonify({
-                "sql": nlp["sql"],
-                "description": nlp.get("description", "Dataset Query"),
-                "matched": nlp.get("matched", True),
-                "table_name": table_name
-            })
+            candidate = generate_sql_for_dataset(question, table_name, cols)
+            if candidate.get("matched") and candidate.get("sql"):
+                nlp = candidate
+                nlp["table_name"] = table_name
 
-    # Academic relational schema routing
-    nlp = generate_sql(question)
-    if not nlp["matched"]:
-        all_ds = get_uploaded_datasets()
-        for ds in all_ds:
-            schema = get_dataset_schema(ds["table_name"])
-            if schema:
-                candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
-                if candidate.get("matched"):
-                    nlp = candidate
-                    nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
-                    break
+    # Standard academic relational schema routing
+    if not nlp or not nlp.get("matched"):
+        nlp = generate_sql(question)
 
+    # Check custom datasets if academic did not match
+    if not nlp or not nlp.get("matched"):
+        try:
+            for ds in all_ds:
+                schema = get_dataset_schema(ds["table_name"])
+                if schema:
+                    candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
+                    if candidate.get("matched") and candidate.get("sql"):
+                        nlp = candidate
+                        nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                        break
+        except Exception:
+            pass
+
+    if nlp and nlp.get("matched") and nlp.get("sql"):
+        return jsonify({
+            "status": "success",
+            "classification": DATABASE_QUERY,
+            "intent": nlp.get("description", "database_query"),
+            "sql": nlp.get("sql"),
+            "description": nlp.get("description"),
+            "matched": True,
+            "confidence": nlp.get("confidence", 3),
+            "message": "SQL query generated successfully.",
+            "suggestions": []
+        })
+
+    # Intent was categorized as a database query, but query formulation failed to map to concrete template
     return jsonify({
-        "sql": nlp.get("sql"),
-        "description": nlp.get("description"),
-        "matched": nlp.get("matched", False),
-        "confidence": nlp.get("confidence", 0)
+        "status": "ambiguous",
+        "classification": AMBIGUOUS_QUERY,
+        "intent": None,
+        "sql": None,
+        "matched": False,
+        "message": f"Could not formulate SQL for '{question}'. Please specify table or column names.",
+        "suggestions": [
+            "Show all students",
+            "Find students with attendance below 75%",
+            "Show average marks by subject"
+        ],
+        "description": "Could not map query to schema."
     })
 
 

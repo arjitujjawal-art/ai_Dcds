@@ -399,9 +399,10 @@ def generate_sql_for_dataset(question: str, table_name: str, columns: list) -> d
             "matched": True, "confidence": 2,
         }
 
-    # Default fallback
+    # Do not invent arbitrary SQL if no intent or column matched
     return {
-        "sql": f"SELECT * FROM {tbl} LIMIT 50",
-        "description": f"First 50 records from {table_name}",
-        "matched": True, "confidence": 1,
+        "sql": None,
+        "description": f"Could not determine valid query operation on dataset '{table_name}'.",
+        "matched": False,
+        "confidence": 0,
     }
