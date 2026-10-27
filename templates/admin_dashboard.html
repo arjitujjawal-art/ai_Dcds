@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard &amp; Governance — QueryMind 2.0 DBMS{% endblock %}
+
+{% block breadcrumb %}Administration &bull; Governance Command Center{% endblock %}
+
+{% block content %}
+<div class="page-container admin-container">
+
+  <!-- Header -->
+  <div class="explorer-header-bar">
+    <div class="ehb-left">
+      <h1 class="page-heading">Administration &amp; System Governance</h1>
+      <p class="page-subheading">
+        Manage datasets, inspect role-based access control policies, monitor database health, and review security audit events.
+      </p>
+    </div>
+    <div class="ehb-right">
+      <div class="schema-stats-badge">
+        <span class="badge-role-admin">Admin Clearance Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Health & DBMS Telemetry Metrics -->
+  <div class="stats-row-grid mt-4">
+    <div class="stat-cell">
+      <span class="stat-label">Academic Students</span>
+      <span class="stat-number">{{ stats.students if stats else 20 }}</span>
+      <span class="stat-meta">Divisions A, B, C</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Academic Subjects</span>
+      <span class="stat-number">{{ stats.subjects if stats else 5 }}</span>
+      <span class="stat-meta">Course curriculum</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Mark Records</span>
+      <span class="stat-number">{{ stats.marks_records if stats else 100 }}</span>
+      <span class="stat-meta">Relational grades</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Attendance Records</span>
+      <span class="stat-number">{{ stats.attendance_records if stats else 100 }}</span>
+      <span class="stat-meta">Radar tracking</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">Total Queries</span>
+      <span class="stat-number">{{ stats.total_queries if stats else 0 }}</span>
+      <span class="stat-meta">{{ stats.success_queries if stats else 0 }} Successful</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-label">AST Blocked Injections</span>
+      <span class="stat-number">{{ stats.blocked_queries if stats else 0 }}</span>
+      <span class="stat-meta">Zero Trust Enforced</span>
+    </div>
+  </div>
+
+  <!-- 2-Column Section: Dataset Ingestion + User Governance -->
+  <div class="admin-grid-2col mt-6">
+
+    <!-- Card 1: Controlled Dataset Ingestion -->
+    <div class="workspace-card">
+      <div class="card-title-row">
+        <div class="card-title-group">
+          <h2 class="card-main-title">Dataset Ingestion &amp; Schema Creation</h2>
+          <p class="card-sub-title">Upload CSV or Excel files. SQLite tables are automatically synthesized and registered.</p>
+        </div>
+        <span class="pipeline-status-badge">Auto DDL Generation</span>
+      </div>
+
+      <form action="{{ url_for('upload_dataset_file') }}" method="POST" enctype="multipart/form-data" class="upload-form mt-4">
+        <div class="upload-dropzone">
+          <input type="file" name="dataset_file" id="datasetFileInput" accept=".csv,.xlsx,.xls" required class="file-input-hidden" onchange="updateUploadLabel(this)" />
+          <label for="datasetFileInput" class="upload-dropzone-label">
+            <div class="dropzone-icon">📁</div>
+            <div class="dropzone-title" id="dropzoneTitle">Click to choose CSV or Excel spreadsheet</div>
+            <div class="dropzone-subtitle">Supported formats: .csv, .xlsx, .xls (Max 15MB)</div>
+          </label>
+        </div>
+
+        <div class="upload-action-row mt-3">
+          <button type="submit" class="btn-primary-action">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>Upload &amp; Analyze Dataset</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Registered Datasets List -->
+      <h3 class="subsection-title mt-6">Registered Datasets ({{ uploaded_datasets|length if uploaded_datasets else 0 }})</h3>
+      <div class="table-scroll-container mt-2">
+        <table class="data-table-modern">
+          <thead>
+            <tr>
+              <th>Table Name</th>
+              <th>Display Name</th>
+              <th>Rows</th>
+              <th>Columns</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if uploaded_datasets %}
+              {% for ds in uploaded_datasets %}
+              <tr>
+                <td><code>{{ ds.table_name }}</code></td>
+                <td><strong>{{ ds.display_name }}</strong></td>
+                <td>{{ ds.row_count }}</td>
+                <td>{{ ds.col_count }}</td>
+                <td>
+                  <a href="{{ url_for('voice_sql_workspace') }}?table={{ ds.table_name }}" class="btn-table-action" title="Query in Voice Workspace">Query</a>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No custom datasets uploaded yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Card 2: Role-Based Access Control & User Accounts -->
+    <div class="workspace-card">
+      <div class="card-title-row">
+        <div class="card-title-group">
+          <h2 class="card-main-title">Role-Based Access Control (RBAC)</h2>
+          <p class="card-sub-title">Configured system user identities and security entitlements.</p>
+        </div>
+        <span class="pipeline-status-badge">sqlglot Enforced</span>
+      </div>
+
+      <!-- RBAC Policies Matrix -->
+      <div class="rbac-policies-box mt-3">
+        <div class="rbac-tier">
+          <span class="badge-role-admin">Admin</span>
+          <span class="tier-desc">Full access to academic tables, custom datasets, schema introspection, and audit logs.</span>
+        </div>
+        <div class="rbac-tier">
+          <span class="badge-role-teacher">Faculty / Teacher</span>
+          <span class="tier-desc">Read access to student marks, attendance radars, division aggregations, and uploaded datasets.</span>
+        </div>
+        <div class="rbac-tier">
+          <span class="badge-role-student">Student</span>
+          <span class="tier-desc">Access to personal academic records. Strictly blocked from administrative and credential columns.</span>
+        </div>
+      </div>
+
+      <!-- Registered App Users Table -->
+      <h3 class="subsection-title mt-6">System Accounts ({{ app_users|length if app_users else 0 }})</h3>
+      <div class="table-scroll-container mt-2">
+        <table class="data-table-modern">
+          <thead>
+            <tr>
+              <th style="width: 50px;">ID</th>
+              <th>Username</th>
+              <th>Assigned Role</th>
+              <th>Test Perspective</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if app_users %}
+              {% for u in app_users %}
+              <tr>
+                <td class="row-num">{{ u.user_id }}</td>
+                <td><strong>{{ u.username }}</strong></td>
+                <td>
+                  <span class="badge-cat badge-cat-{{ u.role }}">{{ u.role|title }}</span>
+                </td>
+                <td>
+                  <a href="{{ url_for('switch_role', target_role=u.role) }}" class="btn-table-action">
+                    Switch to {{ u.role|title }}
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">No users configured.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Audit Logs Section -->
+  <div class="workspace-card mt-6 mb-12">
+    <div class="card-title-row">
+      <div class="card-title-group">
+        <h2 class="card-main-title">Security &amp; Operational Audit Trail</h2>
+        <p class="card-sub-title">Real-time log of query authorizations, blocked injections, and administrative events.</p>
+      </div>
+      <span class="pipeline-status-badge">Immutable Audit Log</span>
+    </div>
+
+    <div class="table-scroll-container mt-3">
+      <table class="data-table-modern">
+        <thead>
+          <tr>
+            <th style="width: 60px;">ID</th>
+            <th>Event Type</th>
+            <th>User</th>
+            <th>Event Details / Disposition</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if audit_logs %}
+            {% for evt in audit_logs[:50] %}
+            <tr>
+              <td class="row-num">{{ evt.id }}</td>
+              <td>
+                {% if 'blocked' in evt.event_type or 'denied' in evt.event_type %}
+                <span class="badge-status-blocked">{{ evt.event_type }}</span>
+                {% elif 'upload' in evt.event_type %}
+                <span class="badge-status-nomatch">{{ evt.event_type }}</span>
+                {% else %}
+                <span class="badge-status-success">{{ evt.event_type }}</span>
+                {% endif %}
+              </td>
+              <td><span class="badge-user">{{ evt.username if evt.username else 'system' }}</span></td>
+              <td style="max-width: 400px; font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); word-break: break-all;">
+                {{ evt.details if evt.details else '&mdash;' }}
+              </td>
+              <td style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">{{ evt.timestamp }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No audit events recorded yet.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function updateUploadLabel(input) {
+    if (input.files && input.files.length > 0) {
+      document.getElementById('dropzoneTitle').textContent = `Selected: ${input.files[0].name} (${(input.files[0].size / 1024).toFixed(1)} KB)`;
+    }
+  }
+</script>
+{% endblock %}

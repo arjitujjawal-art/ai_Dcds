@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Voice SQL Workspace — QueryMind 2.0 DBMS{% endblock %}
+
+{% block breadcrumb %}Workspace &bull; Voice SQL Engine{% endblock %}
+
+{% block content %}
+<div class="page-container workspace-container">
+
+  <!-- ═════════════════════════════════════════════════════════════
+       WORKSPACE HEADER & DATABASE PROFILE SELECTOR
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="workspace-header-bar">
+    <div class="whb-left">
+      <div class="db-profile-badge">
+        <span class="db-dot-live"></span>
+        <span class="db-profile-title">QueryMind Database:</span>
+        <span class="db-profile-name" id="activeDbProfileLabel">AcademicDB Profile (Relational)</span>
+      </div>
+      <div class="db-engine-badge">SQLite WAL &bull; AST Governed</div>
+    </div>
+
+    <div class="whb-right">
+      <label for="datasetSelect" class="dataset-select-label">Target Dataset:</label>
+      <select id="datasetSelect" class="form-select-compact" onchange="onDatasetChange(this.value)">
+        <option value="academic" selected>Academic Relational DB (Students, Subjects, Marks, Attendance)</option>
+        {% for ds in all_datasets %}
+        <option value="{{ ds.table_name }}">{{ ds.display_name }} ({{ ds.row_count }} rows)</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       MAIN 2-COLUMN WORKSPACE GRID
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="workspace-grid mt-4">
+
+    <!-- ─────────────────────────────────────────────────────────
+         TOP / LEFT: SPEECH CAPTURE & NATURAL LANGUAGE INPUT
+         ───────────────────────────────────────────────────────── -->
+    <div class="workspace-card speech-input-card">
+      <div class="card-title-row">
+        <div class="card-title-group">
+          <h2 class="card-main-title">Ask your database anything</h2>
+          <p class="card-sub-title">Speak or type a database question. Speech is transcribed into editable text.</p>
+        </div>
+        
+        <!-- Microphone Status Indicator -->
+        <div class="mic-status-pill" id="micStatusIndicator">
+          <span class="mic-status-dot" id="micStatusDot"></span>
+          <span class="mic-status-text" id="micStatusText">Microphone Ready</span>
+        </div>
+      </div>
+
+      <!-- Voice Interaction Bar -->
+      <div class="voice-controls-strip">
+        <button type="button" id="startRecordBtn" class="btn-record" onclick="startVoiceRecognition()">
+          <span class="rec-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </span>
+          <span id="recordBtnLabel">Start Recording</span>
+        </button>
+
+        <button type="button" id="stopRecordBtn" class="btn-stop-record hidden" onclick="stopVoiceRecognition()">
+          <span class="stop-icon">■</span>
+          <span>Stop Recording</span>
+        </button>
+
+        <!-- Dynamic Live Audio Waves (Active only when listening) -->
+        <div class="listening-wave-container hidden" id="listeningWave">
+          <span class="wave-bar bar-1"></span>
+          <span class="wave-bar bar-2"></span>
+          <span class="wave-bar bar-3"></span>
+          <span class="wave-bar bar-4"></span>
+          <span class="wave-bar bar-5"></span>
+          <span class="wave-hint">Listening to your question...</span>
+        </div>
+      </div>
+
+      <!-- Recognized Question Box (Editable Textarea) -->
+      <div class="recognized-question-block mt-4">
+        <div class="rq-header">
+          <label for="questionInput" class="rq-label">
+            Recognized Question <span class="rq-hint">(Editable &bull; Typing supported as fallback)</span>
+          </label>
+          <div class="rq-actions">
+            <span class="input-mode-tag" id="inputModeBadge">Input Mode: Ready</span>
+            <button type="button" class="btn-clear-text" onclick="clearQuestionText()" title="Clear text">Clear</button>
+          </div>
+        </div>
+
+        <textarea 
+          id="questionInput" 
+          class="question-textarea" 
+          rows="3" 
+          placeholder="Speak into microphone or type here (e.g. &ldquo;Show students whose attendance is below 75 percent&rdquo;)..."
+          oninput="onQuestionInputChanged()"
+        >{{ prefill_question if prefill_question else '' }}</textarea>
+
+        <div class="generate-btn-row mt-3">
+          <button type="button" class="btn-generate-sql" id="generateSqlBtn" onclick="triggerGenerateSql()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Interpret &amp; Generate SQL</span>
+          </button>
+          <span class="generate-status-msg" id="generateStatusMsg"></span>
+        </div>
+      </div>
+
+      <!-- Quick Academic Intent Suggestion Chips -->
+      <div class="quick-chips-strip mt-4">
+        <span class="chips-label">Quick Suggestions:</span>
+        <div class="chips-list">
+          <button type="button" class="quick-chip" onclick="applySuggestion('Show students whose attendance is below 75 percent')">
+            Below 75% Attendance
+          </button>
+          <button type="button" class="quick-chip" onclick="applySuggestion('Show the average marks for each subject')">
+            Average Marks per Subject
+          </button>
+          <button type="button" class="quick-chip" onclick="applySuggestion('List the top five students by marks')">
+            Top 5 Students
+          </button>
+          <button type="button" class="quick-chip" onclick="applySuggestion('Count students in each department')">
+            Students by Department
+          </button>
+          <button type="button" class="quick-chip" onclick="applySuggestion('Show students and their subject marks')">
+            Students &amp; Marks Join
+          </button>
+          <button type="button" class="quick-chip" onclick="applySuggestion('Show all students')">
+            All Students
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────
+         MIDDLE: GENERATED SQL CODE PANEL & ACTIONS
+         ───────────────────────────────────────────────────────── -->
+    <div class="workspace-card sql-editor-card mt-4">
+      <div class="card-title-row">
+        <div class="card-title-group">
+          <h2 class="card-main-title">Generated SQL Query</h2>
+          <p class="card-sub-title">Inspect and edit the SQL statement before executing against SQLite.</p>
+        </div>
+        <div class="ast-badge" id="astGovernanceBadge">
+          <span class="ast-status-dot"></span>
+          <span id="astBadgeText">AST Gateway: Awaiting Query</span>
+        </div>
+      </div>
+
+      <!-- Editable SQL Editor Area -->
+      <div class="code-editor-wrapper mt-3">
+        <div class="editor-gutter">
+          <span>01</span><span>02</span><span>03</span><span>04</span><span>05</span>
+        </div>
+        <textarea 
+          id="sqlEditor" 
+          class="sql-code-textarea" 
+          rows="4" 
+          spellcheck="false"
+          placeholder="-- Generated SQL statement will appear here. You can inspect or modify it."
+          oninput="onSqlEdited()"
+        ></textarea>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="sql-action-bar mt-4">
+        <div class="action-btn-group">
+          <button type="button" class="btn-validate" id="validateSqlBtn" onclick="triggerValidateSql()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Validate SQL (AST Check)</span>
+          </button>
+
+          <button type="button" class="btn-run-query" id="runQueryBtn" onclick="triggerExecuteSql()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>Run Query</span>
+          </button>
+        </div>
+
+        <div class="sql-meta-tags">
+          <span class="tag-meta" id="queryIntentDesc">Deterministic Intent Mapping</span>
+          <span class="tag-meta tag-readonly">Read-Only Enforced</span>
+        </div>
+      </div>
+
+      <!-- Validation Error or Status Feedback Box -->
+      <div class="validation-feedback-box hidden" id="validationFeedbackBox">
+        <div class="vfb-icon" id="vfbIcon">ℹ️</div>
+        <div class="vfb-text" id="vfbMessage"></div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────
+         BOTTOM: QUERY RESULTS & VISUALIZATION
+         ───────────────────────────────────────────────────────── -->
+    <div class="workspace-card results-card mt-4" id="resultsCard">
+      <div class="card-title-row">
+        <div class="card-title-group">
+          <h2 class="card-main-title">Execution Results</h2>
+          <p class="card-sub-title" id="resultsSubtitle">Matching database records from SQLite relational engine.</p>
+        </div>
+
+        <!-- Telemetry Metrics Bar -->
+        <div class="results-telemetry-strip" id="telemetryStrip">
+          <div class="tel-item">
+            <span class="tel-label">Latency:</span>
+            <span class="tel-value" id="telLatency">--</span>
+          </div>
+          <div class="tel-item">
+            <span class="tel-label">Rows:</span>
+            <span class="tel-value" id="telRows">--</span>
+          </div>
+          <div class="tel-item">
+            <span class="tel-label">Status:</span>
+            <span class="tel-value badge-tel-success" id="telStatus">Idle</span>
+          </div>
+          <div class="tel-item" id="ttsItem" style="display: none;">
+            <button type="button" class="btn-voice-readout" id="voiceReadoutBtn" onclick="playResultsAudio()" title="Listen to results summary (Accessibility)">
+              🔊 Listen
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Display Tabs (Table vs Chart) -->
+      <div class="results-view-tabs mt-3" id="resultsViewTabs" style="display: none;">
+        <button type="button" class="tab-btn active" id="tabBtnTable" onclick="switchResultsTab('table')">Tabular Grid</button>
+        <button type="button" class="tab-btn" id="tabBtnChart" onclick="switchResultsTab('chart')">Data Visualization</button>
+      </div>
+
+      <!-- Tabular Results View -->
+      <div class="table-scroll-container mt-3" id="tableContainer">
+        <div class="empty-state-placeholder" id="emptyStatePlaceholder">
+          <div class="placeholder-icon">📋</div>
+          <div class="placeholder-title">No Query Executed Yet</div>
+          <p class="placeholder-text">Click the microphone to speak a database question, or type in the box above, generate SQL, and click <strong>Run Query</strong>.</p>
+        </div>
+
+        <table class="data-table-modern hidden" id="resultsTable">
+          <thead id="resultsTableHead"></thead>
+          <tbody id="resultsTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Chart View Container -->
+      <div class="chart-canvas-container hidden mt-4" id="chartContainer">
+        <div style="height: 320px; position: relative;">
+          <canvas id="resultsChartCanvas"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Include Chart.js for data visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Voice-to-SQL Workspace Client Script -->
+<script src="{{ url_for('static', filename='js/voice_sql.js') }}"></script>
+
+<script>
+  // Check if URL has a prefilled question parameter
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qParam = urlParams.get('q');
+    if (qParam) {
+      const qInput = document.getElementById('questionInput');
+      qInput.value = qParam;
+      triggerGenerateSql();
+    }
+  });
+</script>
+{% endblock %}

@@ -22,7 +22,7 @@
   <aside class="sidebar-rail">
     <!-- Brand Header -->
     <div class="sidebar-brand">
-      <a href="{{ url_for('portal1') }}" class="brand-link">
+      <a href="{{ url_for('home') }}" class="brand-link">
         <div class="brand-logo-mark">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
@@ -31,8 +31,8 @@
           </svg>
         </div>
         <div class="brand-text-block">
-          <span class="brand-title">QueryMind</span>
-          <span class="brand-tagline">Academic Intelligence</span>
+          <span class="brand-title">QueryMind 2.0</span>
+          <span class="brand-tagline">Voice-to-SQL DBMS</span>
         </div>
       </a>
     </div>
@@ -62,19 +62,20 @@
     <!-- Navigation Tree -->
     <nav class="sidebar-nav">
       
-      <!-- Section: Core Intelligence Portals -->
-      <div class="nav-group-header">Core Intelligence</div>
-      <a href="{{ url_for('portal1') }}" class="nav-item {% if request.endpoint in ('portal1', 'index') %}active{% endif %}">
+      <!-- Section: Core Voice-to-SQL DBMS Areas -->
+      <div class="nav-group-header">Core DBMS Platform</div>
+      
+      <a href="{{ url_for('home') }}" class="nav-item {% if request.endpoint == 'home' %}active{% endif %}">
         <span class="nav-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
         </span>
-        <span class="nav-label">Dataset Studio</span>
-        <span class="nav-meta-badge">Portal 1</span>
+        <span class="nav-label">Home</span>
       </a>
 
-      <a href="{{ url_for('portal2') }}" class="nav-item {% if request.endpoint in ('portal2', 'portal2_ask') %}active{% endif %}">
+      <a href="{{ url_for('voice_sql_workspace') }}" class="nav-item {% if request.endpoint in ('voice_sql_workspace', 'workspace') %}active{% endif %}">
         <span class="nav-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -83,29 +84,11 @@
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
         </span>
-        <span class="nav-label">Query Studio</span>
-        <span class="nav-meta-badge voice-pulse">Voice</span>
+        <span class="nav-label">Voice SQL Workspace</span>
+        <span class="nav-meta-badge voice-pulse">Main</span>
       </a>
 
-      <!-- Section: Academic & Operations -->
-      <div class="nav-group-header">Academic Workspace</div>
-      <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-        <span class="nav-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="9"></rect>
-            <rect x="14" y="3" width="7" height="5"></rect>
-            <rect x="14" y="12" width="7" height="9"></rect>
-            <rect x="3" y="16" width="7" height="5"></rect>
-          </svg>
-        </span>
-        <span class="nav-label">
-          {% if current_role == 'student' %}Academic Overview
-          {% elif current_role in ('teacher', 'faculty') %}Class Analytics
-          {% else %}System Overview{% endif %}
-        </span>
-      </a>
-
-      <a href="{{ url_for('datasets') }}" class="nav-item {% if request.endpoint in ('datasets', 'dataset_view') %}active{% endif %}">
+      <a href="{{ url_for('database_explorer') }}" class="nav-item {% if request.endpoint == 'database_explorer' %}active{% endif %}">
         <span class="nav-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
@@ -113,21 +96,49 @@
             <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
           </svg>
         </span>
-        <span class="nav-label">Dataset Library</span>
-        {% if global_datasets %}
-        <span class="nav-count">{{ global_datasets|length }}</span>
-        {% endif %}
+        <span class="nav-label">Database Explorer</span>
+        <span class="nav-meta-badge">ER Model</span>
       </a>
 
-      <a href="{{ url_for('dataset_upload') }}" class="nav-item {% if request.endpoint == 'dataset_upload' %}active{% endif %}">
+      <a href="{{ url_for('sql_playground') }}" class="nav-item {% if request.endpoint == 'sql_playground' %}active{% endif %}">
         <span class="nav-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
           </svg>
         </span>
-        <span class="nav-label">Upload Dataset</span>
+        <span class="nav-label">SQL Playground</span>
+      </a>
+
+      <a href="{{ url_for('history') }}" class="nav-item {% if request.endpoint == 'history' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </span>
+        <span class="nav-label">Query History</span>
+      </a>
+
+      <a href="{{ url_for('admin_dashboard') }}" class="nav-item {% if request.endpoint in ('admin_dashboard', 'dashboard') %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Admin Dashboard</span>
+      </a>
+
+      <!-- Section: Dataset Ingestion & Radar Tools -->
+      <div class="nav-group-header">Dataset &amp; Radar Tools</div>
+      <a href="{{ url_for('portal1') }}" class="nav-item {% if request.endpoint == 'portal1' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Dataset Studio</span>
       </a>
 
       {% if current_role in ('admin', 'teacher') %}
@@ -142,41 +153,6 @@
         <span class="nav-label">Attendance Radar</span>
       </a>
       {% endif %}
-
-      {% if current_role == 'admin' %}
-      <div class="nav-group-header">Governance &amp; Trust</div>
-      <a href="{{ url_for('audit') }}" class="nav-item {% if request.endpoint == 'audit' %}active{% endif %}">
-        <span class="nav-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-          </svg>
-        </span>
-        <span class="nav-label">Security &amp; Audit</span>
-      </a>
-
-      <a href="{{ url_for('users') }}" class="nav-item {% if request.endpoint == 'users' %}active{% endif %}">
-        <span class="nav-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-        </span>
-        <span class="nav-label">User Governance</span>
-      </a>
-      {% endif %}
-
-      <div class="nav-group-header">Telemetry</div>
-      <a href="{{ url_for('history') }}" class="nav-item {% if request.endpoint == 'history' %}active{% endif %}">
-        <span class="nav-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        </span>
-        <span class="nav-label">Query History</span>
-      </a>
     </nav>
 
     <!-- Sidebar Bottom User Profile -->
@@ -216,17 +192,17 @@
           </svg>
         </button>
         <nav class="breadcrumb-trail" aria-label="Breadcrumb">
-          <span class="bc-root">QueryMind</span>
+          <span class="bc-root">QueryMind 2.0</span>
           <span class="bc-sep">/</span>
           <span class="bc-current">
             {% block breadcrumb %}
-              {% if request.endpoint in ('portal1', 'index') %}Dataset Studio
-              {% elif request.endpoint in ('portal2', 'portal2_ask') %}Query Studio
-              {% elif request.endpoint == 'dashboard' %}{{ current_role|title }} Overview
-              {% elif request.endpoint == 'datasets' %}Datasets Library
+              {% if request.endpoint == 'home' %}Home &bull; DBMS Architecture
+              {% elif request.endpoint in ('voice_sql_workspace', 'workspace') %}Voice SQL Workspace
+              {% elif request.endpoint == 'database_explorer' %}Database Explorer &bull; ER Model
+              {% elif request.endpoint == 'sql_playground' %}SQL Playground
               {% elif request.endpoint == 'history' %}Query History
-              {% elif request.endpoint == 'audit' %}Security &amp; Audit
-              {% elif request.endpoint == 'users' %}User Governance
+              {% elif request.endpoint in ('admin_dashboard', 'dashboard') %}Admin Dashboard &bull; Governance
+              {% elif request.endpoint == 'portal1' %}Dataset Studio
               {% elif request.endpoint == 'defaulters' %}Attendance Radar
               {% else %}Workspace{% endif %}
             {% endblock %}

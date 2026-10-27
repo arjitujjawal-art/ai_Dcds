@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Playground — QueryMind 2.0 DBMS{% endblock %}
+
+{% block breadcrumb %}Playground &bull; Manual SQL Execution{% endblock %}
+
+{% block content %}
+<div class="page-container playground-container">
+
+  <!-- Header -->
+  <div class="explorer-header-bar">
+    <div class="ehb-left">
+      <h1 class="page-heading">Manual SQL Playground</h1>
+      <p class="page-subheading">
+        Write, validate, and execute arbitrary relational SQL statements against SQLite with deterministic AST governance.
+      </p>
+    </div>
+    <div class="ehb-right">
+      <div class="schema-stats-badge">
+        <span class="badge-readonly">Read-Only SELECT Enforced</span>
+        <span class="sep">&bull;</span>
+        <span class="badge-limit">Auto LIMIT 50</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Academic Query Templates Bar -->
+  <div class="preset-templates-bar mt-4">
+    <span class="preset-label">Academic Query Presets:</span>
+    <div class="preset-chips">
+      <button type="button" class="preset-chip" onclick="loadPreset('students_attendance')">
+        Students &amp; Attendance Join
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('top_students_marks')">
+        Top Students by Average Marks
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('subject_averages')">
+        Subject Score Averages
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('department_counts')">
+        Count Students per Division
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('min_max_subject')">
+        Min &amp; Max Marks per Subject
+      </button>
+    </div>
+  </div>
+
+  <!-- SQL Editor Card -->
+  <div class="workspace-card sql-editor-card mt-4">
+    <div class="card-title-row">
+      <div class="card-title-group">
+        <h2 class="card-main-title">SQL Statement Editor</h2>
+        <p class="card-sub-title">Enter SQL to execute against the active SQLite database.</p>
+      </div>
+      <div class="ast-badge" id="playgroundAstBadge">
+        <span class="ast-status-dot"></span>
+        <span id="playgroundAstText">AST Governance Ready</span>
+      </div>
+    </div>
+
+    <!-- Code Editor Area -->
+    <div class="code-editor-wrapper mt-3">
+      <div class="editor-gutter">
+        <span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span>
+      </div>
+      <textarea 
+        id="playgroundSqlEditor" 
+        class="sql-code-textarea" 
+        rows="6" 
+        spellcheck="false"
+        placeholder="-- Type your SQL query here (e.g. SELECT * FROM students;)&#10;SELECT s.student_id, s.name, s.division, ROUND(AVG(a.attendance_percentage), 2) AS attendance&#10;FROM students s&#10;JOIN attendance a ON s.student_id = a.student_id&#10;GROUP BY s.student_id, s.name, s.division&#10;ORDER BY attendance ASC;"
+        oninput="onPlaygroundSqlChanged()"
+      >SELECT s.student_id, s.name, s.division, ROUND(AVG(a.attendance_percentage), 2) AS attendance
+FROM students s
+JOIN attendance a ON s.student_id = a.student_id
+GROUP BY s.student_id, s.name, s.division
+ORDER BY attendance ASC;</textarea>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="sql-action-bar mt-4">
+      <div class="action-btn-group">
+        <button type="button" class="btn-validate" onclick="validatePlaygroundSql()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Validate SQL (AST Check)</span>
+        </button>
+
+        <button type="button" class="btn-run-query" onclick="executePlaygroundSql()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Run Query</span>
+        </button>
+
+        <button type="button" class="btn-clear-code" onclick="clearPlaygroundSql()">
+          Clear
+        </button>
+      </div>
+
+      <div class="sql-meta-tags">
+        <button type="button" class="btn-export-csv-action hidden" id="csvExportBtn" onclick="exportResultsAsCsv()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Export CSV</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Validation Feedback Box -->
+    <div class="validation-feedback-box hidden mt-3" id="playgroundFeedbackBox">
+      <div class="vfb-icon" id="playgroundVfbIcon">ℹ️</div>
+      <div class="vfb-text" id="playgroundVfbMessage"></div>
+    </div>
+  </div>
+
+  <!-- Playground Results Card -->
+  <div class="workspace-card results-card mt-4">
+    <div class="card-title-row">
+      <div class="card-title-group">
+        <h2 class="card-main-title">Execution Results</h2>
+        <p class="card-sub-title">Output records returned from SQLite engine.</p>
+      </div>
+
+      <div class="results-telemetry-strip">
+        <div class="tel-item">
+          <span class="tel-label">Latency:</span>
+          <span class="tel-value" id="pgLatency">--</span>
+        </div>
+        <div class="tel-item">
+          <span class="tel-label">Rows:</span>
+          <span class="tel-value" id="pgRows">--</span>
+        </div>
+        <div class="tel-item">
+          <span class="tel-label">Status:</span>
+          <span class="tel-value badge-tel-success" id="pgStatus">Idle</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabular Grid View -->
+    <div class="table-scroll-container mt-3" id="pgTableContainer">
+      <div class="empty-state-placeholder" id="pgPlaceholder">
+        <div class="placeholder-icon">⚡</div>
+        <div class="placeholder-title">Ready to Execute SQL</div>
+        <p class="placeholder-text">Type or select a preset query above, then click <strong>Run Query</strong> to execute.</p>
+      </div>
+
+      <table class="data-table-modern hidden" id="pgTable">
+        <thead id="pgThead"></thead>
+        <tbody id="pgTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let latestPlaygroundResult = null;
+
+  const PRESETS = {
+    students_attendance: `SELECT s.student_id, s.name, s.division, ROUND(AVG(a.attendance_percentage), 2) AS avg_attendance
+FROM students s
+JOIN attendance a ON s.student_id = a.student_id
+GROUP BY s.student_id, s.name, s.division
+HAVING avg_attendance < 75
+ORDER BY avg_attendance ASC;`,
+
+    top_students_marks: `SELECT s.student_id, s.name, s.division, ROUND(AVG(m.marks), 2) AS avg_marks
+FROM students s
+JOIN marks m ON s.student_id = m.student_id
+GROUP BY s.student_id, s.name, s.division
+ORDER BY avg_marks DESC
+LIMIT 5;`,
+
+    subject_averages: `SELECT sub.subject_name, ROUND(AVG(m.marks), 2) AS avg_score, COUNT(m.mark_id) as total_tests
+FROM subjects sub
+JOIN marks m ON sub.subject_id = m.subject_id
+GROUP BY sub.subject_name
+ORDER BY avg_score DESC;`,
+
+    department_counts: `SELECT division AS department, COUNT(*) AS student_count
+FROM students
+GROUP BY division
+ORDER BY division ASC;`,
+
+    min_max_subject: `SELECT sub.subject_name, MIN(m.marks) AS min_score, MAX(m.marks) AS max_score
+FROM subjects sub
+JOIN marks m ON sub.subject_id = m.subject_id
+GROUP BY sub.subject_name;`
+  };
+
+  function loadPreset(key) {
+    const editor = document.getElementById('playgroundSqlEditor');
+    if (editor && PRESETS[key]) {
+      editor.value = PRESETS[key];
+      onPlaygroundSqlChanged();
+      validatePlaygroundSql();
+    }
+  }
+
+  function clearPlaygroundSql() {
+    const editor = document.getElementById('playgroundSqlEditor');
+    if (editor) {
+      editor.value = '';
+      editor.focus();
+    }
+    onPlaygroundSqlChanged();
+  }
+
+  function onPlaygroundSqlChanged() {
+    const badge = document.getElementById('playgroundAstBadge');
+    const text = document.getElementById('playgroundAstText');
+    if (badge && text) {
+      badge.className = 'ast-badge badge-pending';
+      text.textContent = 'Query Modified &bull; Validation Pending';
+    }
+    document.getElementById('csvExportBtn')?.classList.add('hidden');
+  }
+
+  async function validatePlaygroundSql(showAlert = true) {
+    const sql = document.getElementById('playgroundSqlEditor')?.value.trim();
+    const badge = document.getElementById('playgroundAstBadge');
+    const text = document.getElementById('playgroundAstText');
+
+    if (!sql) {
+      showPlaygroundFeedback('Editor is empty. Please enter a SQL query.', 'warning');
+      return false;
+    }
+
+    try {
+      const res = await fetch('/api/validate-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql })
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        if (badge && text) {
+          badge.className = 'ast-badge badge-valid';
+          text.textContent = 'AST Validated &bull; Read-Only SELECT';
+        }
+        if (showAlert) {
+          showPlaygroundFeedback('Abstract Syntax Tree passed: Verified safe SELECT statement without data-modifying expressions.', 'success');
+        }
+        return true;
+      } else {
+        if (badge && text) {
+          badge.className = 'ast-badge badge-invalid';
+          text.textContent = 'AST Policy Rejection';
+        }
+        showPlaygroundFeedback(`Security Block: ${data.reason}`, 'danger');
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  async function executePlaygroundSql() {
+    const sql = document.getElementById('playgroundSqlEditor')?.value.trim();
+    if (!sql) {
+      showPlaygroundFeedback('Please enter a SQL query to execute.', 'warning');
+      return;
+    }
+
+    const isValid = await validatePlaygroundSql(false);
+    if (!isValid) return;
+
+    setPgTelemetry('Running...', '--', 'Running', 'badge-tel-running');
+
+    try {
+      const res = await fetch('/api/execute-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sql: sql,
+          question: 'Playground Manual SQL',
+          input_mode: 'text'
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        setPgTelemetry(`${data.execution_ms || 0}ms`, '0', 'Error', 'badge-tel-danger');
+        showPlaygroundFeedback(`Execution Error: ${data.error}`, 'danger');
+        renderPgTable([], [], data.error);
+        return;
+      }
+
+      latestPlaygroundResult = data;
+      setPgTelemetry(`${data.execution_ms}ms`, `${data.row_count} rows`, 'Authorized (200 OK)', 'badge-tel-success');
+      showPlaygroundFeedback(`Executed successfully in ${data.execution_ms}ms. Returned ${data.row_count} rows.`, 'success');
+      renderPgTable(data.columns, data.rows, null);
+
+      if (data.rows && data.rows.length > 0) {
+        document.getElementById('csvExportBtn')?.classList.remove('hidden');
+      }
+
+    } catch (err) {
+      console.error(err);
+      setPgTelemetry('Error', '--', 'Network Error', 'badge-tel-danger');
+      showPlaygroundFeedback(`Network error executing query: ${err.message}`, 'danger');
+    }
+  }
+
+  function setPgTelemetry(lat, rows, st, cl) {
+    document.getElementById('pgLatency').textContent = lat;
+    document.getElementById('pgRows').textContent = rows;
+    const stEl = document.getElementById('pgStatus');
+    stEl.textContent = st;
+    stEl.className = `tel-value ${cl}`;
+  }
+
+  function showPlaygroundFeedback(msg, type) {
+    const box = document.getElementById('playgroundFeedbackBox');
+    const msgEl = document.getElementById('playgroundVfbMessage');
+    const iconEl = document.getElementById('playgroundVfbIcon');
+    if (!box || !msgEl) return;
+
+    box.classList.remove('hidden', 'vfb-success', 'vfb-warning', 'vfb-danger');
+    if (type === 'success') {
+      box.classList.add('vfb-success');
+      iconEl.textContent = '✅';
+    } else if (type === 'warning') {
+      box.classList.add('vfb-warning');
+      iconEl.textContent = '⚠️';
+    } else if (type === 'danger') {
+      box.classList.add('vfb-danger');
+      iconEl.textContent = '🛑';
+    }
+    msgEl.textContent = msg;
+  }
+
+  function renderPgTable(columns, rows, error) {
+    const placeholder = document.getElementById('pgPlaceholder');
+    const table = document.getElementById('pgTable');
+    const thead = document.getElementById('pgThead');
+    const tbody = document.getElementById('pgTbody');
+
+    if (!rows || rows.length === 0 || error) {
+      table.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+      placeholder.innerHTML = error
+        ? `<div class="placeholder-icon">❌</div><div class="placeholder-title">Execution Error</div><p class="placeholder-text">${escapeHtml(error)}</p>`
+        : `<div class="placeholder-icon">🔍</div><div class="placeholder-title">0 Rows Returned</div><p class="placeholder-text">Query executed successfully but matched zero records.</p>`;
+      return;
+    }
+
+    placeholder.classList.add('hidden');
+    table.classList.remove('hidden');
+
+    let th = '<tr><th style="width: 48px;">#</th>';
+    columns.forEach(c => th += `<th>${escapeHtml(c.replace(/_/g, ' ').toUpperCase())}</th>`);
+    th += '</tr>';
+    thead.innerHTML = th;
+
+    let tb = '';
+    rows.forEach((r, idx) => {
+      tb += `<tr><td class="row-num">${idx + 1}</td>`;
+      columns.forEach(c => {
+        const v = r[c];
+        tb += `<td>${v !== null && v !== undefined ? escapeHtml(String(v)) : '<span class="null-val">NULL</span>'}</td>`;
+      });
+      tb += '</tr>';
+    });
+    tbody.innerHTML = tb;
+  }
+
+  function exportResultsAsCsv() {
+    if (!latestPlaygroundResult || !latestPlaygroundResult.rows || latestPlaygroundResult.rows.length === 0) {
+      return;
+    }
+    const cols = latestPlaygroundResult.columns;
+    const rows = latestPlaygroundResult.rows;
+
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += cols.join(',') + '\r\n';
+
+    rows.forEach(r => {
+      const line = cols.map(c => {
+        let val = r[c] === null || r[c] === undefined ? '' : String(r[c]);
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      }).join(',');
+      csvContent += line + '\r\n';
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `querymind_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+</script>
+{% endblock %}

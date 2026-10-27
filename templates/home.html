@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}QueryMind 2.0 — Voice-to-SQL Relational DBMS Workspace{% endblock %}
+
+{% block breadcrumb %}Home &bull; DBMS Architecture{% endblock %}
+
+{% block content %}
+<div class="page-container editorial-page">
+
+  <!-- ═════════════════════════════════════════════════════════════
+       HERO BANNER: Voice-to-SQL DBMS Academic Platform
+       ═════════════════════════════════════════════════════════════ -->
+  <section class="hero-editorial-card">
+    <div class="hero-badge-strip">
+      <span class="badge-tech">Academic DBMS Project</span>
+      <span class="badge-tech-version">v2.0 Voice-to-SQL</span>
+      <span class="badge-tech-sqlite">SQLite &bull; WAL Mode</span>
+      <span class="badge-tech-governance">AST Governance &bull; sqlglot</span>
+    </div>
+
+    <h1 class="hero-title">
+      Voice-to-SQL Database Management System
+    </h1>
+    
+    <p class="hero-description">
+      QueryMind bridges human speech and relational algebra. Speak any database question, inspect the schema-aware generated SQL, validate it against deterministic AST security policies, and execute it against relational tables with sub-millisecond execution times.
+    </p>
+
+    <!-- Prominent Action CTA -->
+    <div class="hero-cta-group">
+      <a href="{{ url_for('voice_sql_workspace') }}" class="btn-primary-hero">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+        <span>Launch Voice SQL Workspace</span>
+      </a>
+
+      <a href="{{ url_for('database_explorer') }}" class="btn-secondary-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+        <span>Explore Database Schema &amp; ER Model</span>
+      </a>
+
+      <a href="{{ url_for('sql_playground') }}" class="btn-tertiary-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span>Manual SQL Playground</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       INTERACTIVE USER JOURNEY & PIPELINE VISUALIZATION
+       ═════════════════════════════════════════════════════════════ -->
+  <section class="section-card mt-6">
+    <div class="section-header-row">
+      <div>
+        <h2 class="section-title">End-to-End Processing Architecture</h2>
+        <p class="section-subtitle">Zero-trust, schema-aware pipeline from speech capture to relational tabular output</p>
+      </div>
+      <span class="pipeline-status-badge">Deterministic &bull; Zero Cloud Leakage</span>
+    </div>
+
+    <div class="pipeline-flow-grid">
+      <div class="flow-step-box">
+        <div class="flow-step-num">01</div>
+        <div class="flow-step-icon">🎙️</div>
+        <div class="flow-step-title">Speech-to-Text Input</div>
+        <div class="flow-step-desc">Web Speech API captures real-time microphone audio and transcribes into editable text.</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step-box">
+        <div class="flow-step-num">02</div>
+        <div class="flow-step-icon">🧠</div>
+        <div class="flow-step-title">Schema-Aware Intent</div>
+        <div class="flow-step-desc">Token extraction and spoken-number normalization match intent to relational templates.</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step-box">
+        <div class="flow-step-num">03</div>
+        <div class="flow-step-icon">🛡️</div>
+        <div class="flow-step-title">Deterministic AST Check</div>
+        <div class="flow-step-desc">sqlglot AST validation blocks DDL/DML, validates table RBAC, and injects row limits.</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step-box">
+        <div class="flow-step-num">04</div>
+        <div class="flow-step-icon">👁️</div>
+        <div class="flow-step-title">User Review &amp; Edit</div>
+        <div class="flow-step-desc">User inspects and edits SQL before clicking Run Query. No unsafe auto-execution!</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step-box">
+        <div class="flow-step-num">05</div>
+        <div class="flow-step-icon">⚡</div>
+        <div class="flow-step-title">Database Execution</div>
+        <div class="flow-step-desc">SQLite executes authorized query, returning records, telemetry, and visual charts.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       CENTRAL DBMS ACADEMIC CONCEPTS
+       ═════════════════════════════════════════════════════════════ -->
+  <section class="mt-8">
+    <div class="section-header-block mb-4">
+      <h2 class="section-title">Core DBMS Concepts Demonstrated in QueryMind</h2>
+      <p class="section-subtitle">
+        Voice recognition is the input mechanism; relational database engineering remains the technical foundation.
+      </p>
+    </div>
+
+    <div class="dbms-concepts-grid">
+      <!-- 1. Relational Database -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-relational">🗄️</div>
+          <div class="concept-meta">
+            <h3>Relational Database Model</h3>
+            <span class="concept-tag">Schema Structure</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Normalized tables (<code>students</code>, <code>subjects</code>, <code>marks</code>, <code>attendance</code>) modeling academic entities with strict primary keys and foreign key constraints.
+        </p>
+        <div class="concept-code-snippet">
+          <code>students (PK: student_id) &bull; marks (FK: student_id, subject_id)</code>
+        </div>
+      </div>
+
+      <!-- 2. ER Modeling -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-er">📐</div>
+          <div class="concept-meta">
+            <h3>Entity-Relationship Modeling</h3>
+            <span class="concept-tag">1:N &bull; Cardinality</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Live ER diagram generated directly from SQLite metadata via <code>PRAGMA foreign_key_list</code>, showing one-to-many relationships between students, subjects, and examination marks.
+        </p>
+        <div class="concept-code-snippet">
+          <code>students ||--o{ marks &bull; subjects ||--o{ attendance</code>
+        </div>
+      </div>
+
+      <!-- 3. Complex Relational SQL -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-sql">⚡</div>
+          <div class="concept-meta">
+            <h3>Relational SQL Algebra</h3>
+            <span class="concept-tag">Joins &bull; Aggregations</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Full support for multi-table INNER/LEFT JOINs, GROUP BY, HAVING thresholds, subqueries, and aggregation functions (<code>AVG</code>, <code>SUM</code>, <code>COUNT</code>, <code>MIN</code>, <code>MAX</code>).
+        </p>
+        <div class="concept-code-snippet">
+          <code>JOIN attendance a ON s.student_id = a.student_id HAVING ...</code>
+        </div>
+      </div>
+
+      <!-- 4. Query Processing & AST Security -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-ast">🛡️</div>
+          <div class="concept-meta">
+            <h3>Query Processing &amp; AST Security</h3>
+            <span class="concept-tag">sqlglot &bull; Zero Trust</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Abstract Syntax Tree parser guarantees that only read-only SELECT queries reach SQLite. Blocks DROP, INSERT, DELETE, multiple statement injection, and restricts access by role.
+        </p>
+        <div class="concept-code-snippet">
+          <code>isinstance(syntax_tree, exp.Select) &bull; Auto LIMIT 50</code>
+        </div>
+      </div>
+
+      <!-- 5. Schema Management -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-schema">🔍</div>
+          <div class="concept-meta">
+            <h3>Schema Management &amp; Introspection</h3>
+            <span class="concept-tag">PRAGMA &bull; Dynamic</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Dynamic inspection of table catalogs, column datatypes, nullability, default values, and live row counts without hardcoded schema assumptions.
+        </p>
+        <div class="concept-code-snippet">
+          <code>PRAGMA table_info &bull; PRAGMA foreign_key_list</code>
+        </div>
+      </div>
+
+      <!-- 6. Query Telemetry & Audit Logs -->
+      <div class="concept-card">
+        <div class="concept-header">
+          <div class="concept-icon-wrap icon-history">📜</div>
+          <div class="concept-meta">
+            <h3>Audit Logging &amp; Query History</h3>
+            <span class="concept-tag">Input Mode &bull; Latency</span>
+          </div>
+        </div>
+        <p class="concept-body">
+          Persistent recording of every generated SQL statement, user identity, execution duration (ms), row count, status, and input capture method (🎙️ Voice vs. ⌨️ Text).
+        </p>
+        <div class="concept-code-snippet">
+          <code>query_logs (input_mode, status, execution_time_ms)</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       LIVE ACADEMIC DATABASE SNAPSHOT
+       ═════════════════════════════════════════════════════════════ -->
+  <section class="section-card mt-8">
+    <div class="section-header-row mb-4">
+      <div>
+        <h3 class="section-title">Live Academic Database Profile</h3>
+        <p class="section-subtitle">Connected SQLite Database: <code>db/querymind.db</code></p>
+      </div>
+      <a href="{{ url_for('database_explorer') }}" class="btn-text-action">View Full Schema Explorer &rarr;</a>
+    </div>
+
+    <div class="stats-row-grid">
+      <div class="stat-cell">
+        <span class="stat-label">Total Students</span>
+        <span class="stat-number">{{ stats.students if stats else 20 }}</span>
+        <span class="stat-meta">Across 3 Divisions (A, B, C)</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Academic Subjects</span>
+        <span class="stat-number">{{ stats.subjects if stats else 5 }}</span>
+        <span class="stat-meta">Math, CS, Physics, Chem, Eng</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Mark Records</span>
+        <span class="stat-number">{{ stats.marks_records if stats else 100 }}</span>
+        <span class="stat-meta">Foreign-key linked to students</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Attendance Records</span>
+        <span class="stat-number">{{ stats.attendance_records if stats else 100 }}</span>
+        <span class="stat-meta">Threshold tracking for defaulters</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Total Queries Executed</span>
+        <span class="stat-number">{{ stats.total_queries if stats else 0 }}</span>
+        <span class="stat-meta">{{ stats.success_queries if stats else 0 }} Authorized Successes</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       READY-TO-TEST SPOKEN QUERIES
+       ═════════════════════════════════════════════════════════════ -->
+  <section class="section-card mt-8 mb-12">
+    <div class="section-header-row mb-4">
+      <div>
+        <h3 class="section-title">Sample Voice Queries to Test</h3>
+        <p class="section-subtitle">Click any sample question to load it directly into the Voice SQL Workspace</p>
+      </div>
+    </div>
+
+    <div class="sample-queries-list">
+      <a href="{{ url_for('voice_sql_workspace') }}?q=Show+students+whose+attendance+is+below+75+percent" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;Show students whose attendance is below 75 percent.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT s.student_id, s.name, a.attendance_percentage ... WHERE attendance &lt; 75</code>
+        </div>
+      </a>
+
+      <a href="{{ url_for('voice_sql_workspace') }}?q=Show+the+average+marks+for+each+subject" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;Show the average marks for each subject.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT sub.subject_name, ROUND(AVG(m.marks), 2) ... GROUP BY subject_name</code>
+        </div>
+      </a>
+
+      <a href="{{ url_for('voice_sql_workspace') }}?q=List+the+top+five+students+by+marks" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;List the top five students by marks.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT s.student_id, s.name, AVG(m.marks) ... ORDER BY avg_marks DESC LIMIT 5</code>
+        </div>
+      </a>
+
+      <a href="{{ url_for('voice_sql_workspace') }}?q=Count+students+in+each+department" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;Count students in each department.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT division AS department, COUNT(*) FROM students GROUP BY division</code>
+        </div>
+      </a>
+
+      <a href="{{ url_for('voice_sql_workspace') }}?q=Show+students+and+their+subject+marks" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;Show students and their subject marks.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT s.name, sub.subject_name, m.marks FROM students s JOIN marks m ...</code>
+        </div>
+      </a>
+
+      <a href="{{ url_for('voice_sql_workspace') }}?q=Show+all+students" class="sample-query-item">
+        <div class="sqi-left">
+          <span class="sqi-mic-icon">🎙️</span>
+          <span class="sqi-text">&ldquo;Show all students.&rdquo;</span>
+        </div>
+        <div class="sqi-sql-preview">
+          <code>SELECT student_id, name, division, email FROM students ORDER BY name</code>
+        </div>
+      </a>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

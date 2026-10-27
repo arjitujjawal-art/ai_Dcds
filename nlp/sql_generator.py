@@ -5,6 +5,22 @@ SQLite-compatible queries. 13 patterns covering all spec examples.
 
 import re
 
+SPOKEN_NUMBER_MAP = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "fifteen": 15, "twenty": 20, "twenty five": 25, "thirty": 30,
+    "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+    "seventy five": 75, "eighty": 80, "eighty five": 85,
+    "ninety": 90, "hundred": 100
+}
+
+def normalize_spoken_numbers(text: str) -> str:
+    """Normalize spoken English number words to digits for robust voice transcription."""
+    res = text.lower()
+    for word, num in sorted(SPOKEN_NUMBER_MAP.items(), key=lambda x: -len(x[0])):
+        res = re.sub(r"\b" + re.escape(word) + r"\b", str(num), res)
+    return res
+
 PATTERNS = [
     # Top N students by average marks
     {
@@ -70,13 +86,13 @@ PATTERNS = [
     {
         "keywords": ["student","attendance","below"],
         "template": (
-            "SELECT s.name, s.division, "
-            "ROUND(AVG(a.attendance_percentage),2) AS avg_attendance "
+            "SELECT s.student_id, s.name, s.division, "
+            "ROUND(AVG(a.attendance_percentage),2) AS attendance_percentage "
             "FROM students s "
             "JOIN attendance a ON s.student_id = a.student_id "
             "GROUP BY s.student_id, s.name, s.division "
-            "HAVING avg_attendance < {threshold} "
-            "ORDER BY avg_attendance"
+            "HAVING attendance_percentage < {threshold} "
+            "ORDER BY attendance_percentage"
         ),
         "extract": {"threshold": r"\b(\d+)\b"},
         "defaults": {"threshold": 75},
@@ -132,6 +148,20 @@ PATTERNS = [
         "defaults": {},
         "description": "All subjects",
     },
+    # Show students and their subject marks (Relational 3-table JOIN)
+    {
+        "keywords": ["student","subject","mark"],
+        "template": (
+            "SELECT s.student_id, s.name, s.division, sub.subject_name, m.marks "
+            "FROM students s "
+            "JOIN marks m ON s.student_id = m.student_id "
+            "JOIN subjects sub ON m.subject_id = sub.subject_id "
+            "ORDER BY s.name, sub.subject_name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Students and their subject marks",
+    },
     # Count students per division
     {
         "keywords": ["count","student","division"],
@@ -142,6 +172,17 @@ PATTERNS = [
         "extract": {},
         "defaults": {},
         "description": "Student count per division",
+    },
+    # Count students in each department (Academic department alias for division)
+    {
+        "keywords": ["count","student","department"],
+        "template": (
+            "SELECT division AS department, COUNT(*) AS student_count "
+            "FROM students GROUP BY division ORDER BY division"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Student count per department",
     },
     # Top N by raw marks
     {
@@ -183,7 +224,8 @@ PATTERNS = [
 
 
 def _tokens(question: str) -> set:
-    words = re.sub(r"[^a-z0-9\s]", "", question.lower()).split()
+    q_norm = normalize_spoken_numbers(question)
+    words = re.sub(r"[^a-z0-9\s]", "", q_norm.lower()).split()
     out = set()
     for w in words:
         out.add(w)
@@ -193,7 +235,8 @@ def _tokens(question: str) -> set:
 
 
 def generate_sql(question: str) -> dict:
-    toks = _tokens(question)
+    q_norm = normalize_spoken_numbers(question)
+    toks = _tokens(q_norm)
 
     best, score = None, 0
     for p in PATTERNS:
@@ -204,7 +247,7 @@ def generate_sql(question: str) -> dict:
     if best and score >= 2:
         params = dict(best["defaults"])
         for key, rx in best["extract"].items():
-            m = re.search(rx, question)
+            m = re.search(rx, q_norm)
             if m:
                 params[key] = int(m.group(1))
         sql  = best["template"].format(**params)

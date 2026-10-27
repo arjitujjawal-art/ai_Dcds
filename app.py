@@ -40,7 +40,7 @@ from db.database import (
     get_uploaded_datasets,
     get_dataset_schema,
     delete_dataset,
-    execute_query,
+    get_database_schema_metadata,
 )
 
 # ─── App ──────────────────────────────────────────────────────────────────────
@@ -175,9 +175,57 @@ def dashboard():
     )
 
 
-# ── PORTAL 1: Dataset Upload & Automated Analysis ─────────────────────────────
+# ── QUERYMIND 2.0 PRIMARY APPLICATION AREAS ───────────────────────────────────
 
 @app.route("/")
+def home():
+    stats = get_system_stats()
+    recent = get_all_history(6)
+    return render_template("home.html", stats=stats, recent=recent)
+
+
+@app.route("/workspace")
+@app.route("/voice-sql")
+def voice_sql_workspace():
+    all_ds = get_uploaded_datasets()
+    prefill = request.args.get("q", "").strip()
+    return render_template(
+        "voice_sql_workspace.html",
+        all_datasets=all_ds,
+        prefill_question=prefill,
+    )
+
+
+@app.route("/explorer")
+def database_explorer():
+    meta = get_database_schema_metadata()
+    return render_template("explorer.html", schema_meta=meta)
+
+
+@app.route("/playground")
+def sql_playground():
+    meta = get_database_schema_metadata()
+    return render_template("playground.html", schema_meta=meta)
+
+
+@app.route("/admin")
+@login_required
+def admin_dashboard():
+    stats = get_system_stats()
+    uploaded_datasets = get_uploaded_datasets()
+    app_users = get_app_users()
+    audit_logs = get_audit_logs(100)
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        uploaded_datasets=uploaded_datasets,
+        app_users=app_users,
+        audit_logs=audit_logs,
+    )
+
+
+# ── PORTAL 1: Dataset Upload & Automated Analysis ─────────────────────────────
+
 @app.route("/portal1")
 def portal1():
     all_ds = get_uploaded_datasets()
@@ -824,6 +872,140 @@ def transcribe_audio():
         "engine": "WebSpeechAPI + faster-whisper reference bridge",
         "message": "Direct client-side streaming ASR active for sub-200ms latency."
     })
+
+
+# ── QueryMind 2.0 Async REST APIs ─────────────────────────────────────────────
+
+@app.route("/api/generate-sql", methods=["POST"])
+def api_generate_sql():
+    """
+    Schema-aware natural language to SQL translation endpoint.
+    Translates intent into a deterministic SQL statement without executing it.
+    """
+    data = request.get_json(silent=True) or {}
+    question = data.get("question", "").strip()
+    table_name = data.get("table_name", "").strip()
+    if not question:
+        return jsonify({"error": "Empty question received."}), 400
+
+    # Custom dataset table
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        schema = get_dataset_schema(table_name)
+        if schema:
+            cols = schema.get("all_columns", [])
+            nlp = generate_sql_for_dataset(question, table_name, cols)
+            return jsonify({
+                "sql": nlp["sql"],
+                "description": nlp.get("description", "Dataset Query"),
+                "matched": nlp.get("matched", True),
+                "table_name": table_name
+            })
+
+    # Academic relational schema routing
+    nlp = generate_sql(question)
+    if not nlp["matched"]:
+        all_ds = get_uploaded_datasets()
+        for ds in all_ds:
+            schema = get_dataset_schema(ds["table_name"])
+            if schema:
+                candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
+                if candidate.get("matched"):
+                    nlp = candidate
+                    nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                    break
+
+    return jsonify({
+        "sql": nlp.get("sql"),
+        "description": nlp.get("description"),
+        "matched": nlp.get("matched", False),
+        "confidence": nlp.get("confidence", 0)
+    })
+
+
+@app.route("/api/validate-sql", methods=["POST"])
+def api_validate_sql():
+    """
+    Deterministic AST governance validation gateway.
+    Verifies read-only SELECT expressions, entity RBAC, and injects row ceilings.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    table_name = data.get("table_name", "").strip()
+    if not sql:
+        return jsonify({"valid": False, "reason": "Empty SQL query."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    return jsonify(v)
+
+
+@app.route("/api/execute-sql", methods=["POST"])
+def api_execute_sql():
+    """
+    Authorized SQL execution engine.
+    Validates AST, executes against SQLite, records query history with input mode,
+    and returns tabular records with execution latency and visualization specs.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    question = data.get("question", "").strip()
+    input_mode = data.get("input_mode", "text").strip().lower()
+    table_name = data.get("table_name", "").strip()
+    if input_mode not in ("voice", "text"):
+        input_mode = "text"
+
+    if not sql:
+        return jsonify({"error": "No SQL provided for execution."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    if not v["valid"]:
+        log_query(session.get("user_id", 1), session.get("username", "user"),
+                  question or sql, sql, "validation_failed", 0, 0,
+                  error=v["reason"], input_mode=input_mode)
+        log_audit("validation_blocked", session.get("user_id", 1), session.get("username", "user"),
+                  details=json.dumps({"sql": sql, "violation": v["reason"], "input_mode": input_mode}))
+        return jsonify({"error": f"AST Governance Rejection: {v['reason']}", "valid": False}), 403
+
+    sanitized_sql = v.get("sanitized_sql") or sql
+    res = execute_query(sanitized_sql)
+
+    status = "success" if not res.get("error") else "db_error"
+    log_query(session.get("user_id", 1), session.get("username", "user"),
+              question or sanitized_sql, sanitized_sql, status,
+              res["execution_ms"], res["row_count"],
+              error=res.get("error"), input_mode=input_mode)
+
+    chart = make_chart(res["columns"], res["rows"])
+    verbal = DataToSpeechNarrator.construct_verbal_summary(
+        question or "Database query", res["columns"], res["rows"], error=res.get("error")
+    )
+
+    return jsonify({
+        "columns": res["columns"],
+        "rows": res["rows"],
+        "row_count": res["row_count"],
+        "execution_ms": res["execution_ms"],
+        "sanitized_sql": sanitized_sql,
+        "error": res.get("error"),
+        "chart": chart,
+        "verbal_summary": verbal
+    })
+
+
+@app.route("/api/schema")
+def api_schema():
+    """Return live database metadata and generated Mermaid ER diagram."""
+    meta = get_database_schema_metadata()
+    return jsonify(meta)
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
