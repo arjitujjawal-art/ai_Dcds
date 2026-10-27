@@ -88,6 +88,15 @@ ORDER BY attendance ASC;</textarea>
           <span>Validate SQL (AST Check)</span>
         </button>
 
+        <button type="button" class="btn-explain" onclick="explainPlaygroundSql()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Explain Plan</span>
+        </button>
+
         <button type="button" class="btn-run-query" onclick="executePlaygroundSql()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -110,6 +119,20 @@ ORDER BY attendance ASC;</textarea>
           <span>Export CSV</span>
         </button>
       </div>
+    </div>
+
+    <!-- Query Execution Plan (EXPLAIN) Drawer -->
+    <div class="plan-drawer hidden" id="playgroundPlanDrawer">
+      <div class="plan-header">
+        <div class="plan-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span>DBMS Execution Plan (EXPLAIN QUERY PLAN)</span>
+        </div>
+        <div class="plan-summary-chips" id="pgPlanSummaryChips"></div>
+      </div>
+      <div class="plan-steps-list" id="pgPlanStepsList"></div>
     </div>
 
     <!-- Validation Feedback Box -->
@@ -261,6 +284,64 @@ GROUP BY sub.subject_name;`
     } catch (err) {
       console.error(err);
       return false;
+    }
+  }
+
+  async function explainPlaygroundSql() {
+    const sql = document.getElementById('playgroundSqlEditor')?.value.trim();
+    const drawer = document.getElementById('playgroundPlanDrawer');
+    const chipsContainer = document.getElementById('pgPlanSummaryChips');
+    const listContainer = document.getElementById('pgPlanStepsList');
+
+    if (!sql) {
+      showPlaygroundFeedback('Please enter a SQL query before requesting an execution plan.', 'warning');
+      return;
+    }
+
+    showPlaygroundFeedback('Computing execution plan using DBMS query optimizer...', 'info');
+
+    try {
+      const res = await fetch('/api/explain-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql })
+      });
+      const data = await res.json();
+
+      if (data.status === 'success' && data.steps) {
+        if (drawer) drawer.classList.remove('hidden');
+
+        if (chipsContainer) {
+          const opt = data.summary.optimization_level || 'Normal';
+          const tables = (data.summary.tables_accessed || []).join(', ') || 'None';
+          chipsContainer.innerHTML = `
+            <span class="plan-chip plan-chip-opt">${escapeHtml(opt)}</span>
+            ${data.summary.has_temp_btree ? '<span class="plan-chip plan-chip-btree">Temp B-Tree Sort</span>' : ''}
+            <span class="plan-chip plan-chip-tables">Tables: ${escapeHtml(tables)}</span>
+          `;
+        }
+
+        if (listContainer) {
+          listContainer.innerHTML = data.steps.map(st => {
+            let itemClass = 'plan-step-item';
+            if (st.step_type === 'INDEX_SEARCH') itemClass += ' step-search';
+            else if (st.step_type === 'TEMP_BTREE_SORT') itemClass += ' step-btree';
+            return `
+              <div class="${itemClass}">
+                <span class="plan-step-type">${escapeHtml(st.step_type)}</span>
+                <span class="plan-step-detail">${escapeHtml(st.detail)}</span>
+              </div>
+            `;
+          }).join('');
+        }
+
+        showPlaygroundFeedback(`Execution plan computed: ${data.steps.length} step(s) identified.`, 'success');
+      } else {
+        showPlaygroundFeedback(`Failed to compute execution plan: ${data.error || 'Unknown error'}`, 'danger');
+      }
+    } catch (err) {
+      console.error(err);
+      showPlaygroundFeedback(`Network error explaining plan: ${err.message}`, 'danger');
     }
   }
 

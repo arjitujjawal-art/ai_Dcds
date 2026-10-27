@@ -41,6 +41,7 @@ from db.database import (
     get_dataset_schema,
     delete_dataset,
     get_database_schema_metadata,
+    explain_query_plan,
 )
 
 # ─── App ──────────────────────────────────────────────────────────────────────
@@ -999,6 +1000,33 @@ def api_execute_sql():
         "chart": chart,
         "verbal_summary": verbal
     })
+
+
+@app.route("/api/explain-sql", methods=["POST"])
+def api_explain_sql():
+    """
+    Query execution plan analyzer (EXPLAIN QUERY PLAN).
+    Provides deep DBMS inspection into scan types (FULL TABLE SCAN vs INDEX SEARCH),
+    temporary B-Trees, and table access patterns for academic query profiling.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    table_name = data.get("table_name", "").strip()
+    if not sql:
+        return jsonify({"error": "No SQL provided for plan analysis."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    if not v["valid"]:
+        return jsonify({"error": f"Cannot explain invalid query: {v['reason']}", "valid": False}), 400
+
+    sanitized_sql = v.get("sanitized_sql") or sql
+    plan = explain_query_plan(sanitized_sql)
+    return jsonify(plan)
 
 
 @app.route("/api/schema")

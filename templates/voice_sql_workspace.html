@@ -180,6 +180,15 @@
             <span>Validate SQL (AST Check)</span>
           </button>
 
+          <button type="button" class="btn-explain" id="explainSqlBtn" onclick="triggerExplainSql()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Explain Plan</span>
+          </button>
+
           <button type="button" class="btn-run-query" id="runQueryBtn" onclick="triggerExecuteSql()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -192,6 +201,20 @@
           <span class="tag-meta" id="queryIntentDesc">Deterministic Intent Mapping</span>
           <span class="tag-meta tag-readonly">Read-Only Enforced</span>
         </div>
+      </div>
+
+      <!-- Query Execution Plan (EXPLAIN) Drawer -->
+      <div class="plan-drawer hidden" id="planDrawer">
+        <div class="plan-header">
+          <div class="plan-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span>DBMS Execution Plan (EXPLAIN QUERY PLAN)</span>
+          </div>
+          <div class="plan-summary-chips" id="planSummaryChips"></div>
+        </div>
+        <div class="plan-steps-list" id="planStepsList"></div>
       </div>
 
       <!-- Validation Error or Status Feedback Box -->

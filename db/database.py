@@ -207,6 +207,80 @@ def execute_query(sql: str, max_rows: int = 500):
                 "execution_ms": elapsed, "error": str(exc)}
 
 
+def explain_query_plan(sql: str) -> dict:
+    """
+    Run EXPLAIN QUERY PLAN on a validated SELECT query to introspect
+    the DBMS query execution tree, scan strategies, and B-Tree usage.
+    """
+    import re
+    try:
+        conn = _conn()
+        c = conn.cursor()
+        c.execute(f"EXPLAIN QUERY PLAN {sql}")
+        raw_rows = c.fetchall()
+        conn.close()
+
+        plan_steps = []
+        has_index_scan = False
+        has_temp_btree = False
+        tables_accessed = []
+
+        for r in raw_rows:
+            step_id = r[0] if len(r) > 0 else 0
+            parent_id = r[1] if len(r) > 1 else 0
+            detail = r[3] if len(r) > 3 else (r[0] if isinstance(r[0], str) else str(r))
+
+            step_type = "SCAN"
+            if "SEARCH" in detail.upper():
+                step_type = "INDEX_SEARCH"
+                has_index_scan = True
+            elif "SCAN" in detail.upper():
+                step_type = "FULL_TABLE_SCAN"
+            elif "USE TEMP B-TREE" in detail.upper():
+                step_type = "TEMP_BTREE_SORT"
+                has_temp_btree = True
+            elif "COMPOUND" in detail.upper():
+                step_type = "COMPOUND_SUBQUERY"
+
+            tbl_match = re.search(r"(?:SCAN|SEARCH)\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)", detail, re.IGNORECASE)
+            tbl = tbl_match.group(1) if tbl_match else None
+
+            plan_steps.append({
+                "id": step_id,
+                "parent": parent_id,
+                "detail": detail,
+                "step_type": step_type,
+                "table": tbl
+            })
+
+        # Detect all database tables referenced in the query
+        for kt in ["students", "marks", "subjects", "attendance", "app_users", "query_logs", "audit_logs"]:
+            if re.search(rf"\b{kt}\b", sql, re.IGNORECASE) and kt not in tables_accessed:
+                tables_accessed.append(kt)
+
+        return {
+            "status": "success",
+            "sql": sql,
+            "steps": plan_steps,
+            "summary": {
+                "step_count": len(plan_steps),
+                "has_index_scan": has_index_scan,
+                "has_temp_btree": has_temp_btree,
+                "tables_accessed": tables_accessed,
+                "optimization_level": "High (Indexed)" if has_index_scan and not has_temp_btree else ("Moderate (Sorted with B-Tree)" if has_temp_btree else "Sequential (Full Scan)")
+            },
+            "error": None
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "sql": sql,
+            "steps": [],
+            "summary": {},
+            "error": str(exc)
+        }
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # LOGGING
 # ══════════════════════════════════════════════════════════════════════════════

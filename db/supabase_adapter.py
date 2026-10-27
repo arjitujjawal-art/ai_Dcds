@@ -126,5 +126,14 @@ class DatabaseAdapter:
             "mermaid": meta.get("er_mermaid", "")
         }
 
+    def explain_query(self, sql: str) -> Dict[str, Any]:
+        """
+        Explain query execution plan for performance profiling and index inspection.
+        """
+        import db.database as db
+        res = db.explain_query_plan(sql)
+        res["engine"] = self.backend_name
+        return res
+
 # Global singleton adapter instance
 db_adapter = DatabaseAdapter()

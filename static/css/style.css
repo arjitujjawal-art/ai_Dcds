@@ -2354,6 +2354,110 @@ input, textarea, select {
   transform: translateY(-1px);
 }
 
+.btn-explain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F5F9;
+  color: #334155;
+  border: 1px solid #CBD5E1;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.btn-explain:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.plan-drawer {
+  background: #0F172A;
+  color: #E2E8F0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 14px;
+  border: 1px solid #334155;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #1E293B;
+  padding-bottom: 8px;
+}
+
+.plan-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #93C5FD;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plan-summary-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.plan-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.plan-chip-opt { background: #065F46; color: #A7F3D0; }
+.plan-chip-btree { background: #78350F; color: #FDE68A; }
+.plan-chip-tables { background: #1E3A8A; color: #BFDBFE; }
+
+.plan-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.plan-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1E293B;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid #3B82F6;
+}
+
+.plan-step-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #334155;
+  color: #94A3B8;
+  min-width: 110px;
+  text-align: center;
+}
+
+.plan-step-item.step-search { border-left-color: #10B981; }
+.plan-step-item.step-search .plan-step-type { background: #064E3B; color: #6EE7B7; }
+
+.plan-step-item.step-btree { border-left-color: #F59E0B; }
+.plan-step-item.step-btree .plan-step-type { background: #78350F; color: #FCD34D; }
+
+.plan-step-detail {
+  color: #F1F5F9;
+  flex: 1;
+}
+
 .btn-clear-code {
   font-size: 12px;
   color: var(--text-muted);

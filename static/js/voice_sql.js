@@ -576,3 +576,71 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+/**
+ * Step 4: Query Execution Plan (EXPLAIN QUERY PLAN) Analysis
+ */
+async function triggerExplainSql() {
+  const sql = document.getElementById('sqlEditor')?.value.trim();
+  const datasetSelect = document.getElementById('datasetSelect');
+  const tableName = datasetSelect ? datasetSelect.value : 'academic';
+  const drawer = document.getElementById('planDrawer');
+  const chipsContainer = document.getElementById('planSummaryChips');
+  const listContainer = document.getElementById('planStepsList');
+
+  if (!sql) {
+    showValidationFeedback('Please enter or generate a SQL statement before explaining its execution plan.', 'warning');
+    return;
+  }
+
+  showValidationFeedback('Analyzing query execution plan against DBMS query optimizer...', 'info');
+
+  try {
+    const res = await fetch('/api/explain-sql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql, table_name: tableName })
+    });
+
+    const data = await res.json();
+
+    if (data.status === 'success' && data.steps) {
+      if (drawer) drawer.classList.remove('hidden');
+
+      // Populate summary chips
+      if (chipsContainer) {
+        const opt = data.summary.optimization_level || 'Normal';
+        const tables = (data.summary.tables_accessed || []).join(', ') || 'None';
+        chipsContainer.innerHTML = `
+          <span class="plan-chip plan-chip-opt">${escapeHtml(opt)}</span>
+          ${data.summary.has_temp_btree ? '<span class="plan-chip plan-chip-btree">Temp B-Tree Sort</span>' : ''}
+          <span class="plan-chip plan-chip-tables">Tables: ${escapeHtml(tables)}</span>
+        `;
+      }
+
+      // Populate execution plan step nodes
+      if (listContainer) {
+        listContainer.innerHTML = data.steps.map((st) => {
+          let itemClass = 'plan-step-item';
+          if (st.step_type === 'INDEX_SEARCH') itemClass += ' step-search';
+          else if (st.step_type === 'TEMP_BTREE_SORT') itemClass += ' step-btree';
+
+          return `
+            <div class="${itemClass}">
+              <span class="plan-step-type">${escapeHtml(st.step_type)}</span>
+              <span class="plan-step-detail">${escapeHtml(st.detail)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      showValidationFeedback(`Query plan computed successfully: ${data.steps.length} execution tree step(s) identified.`, 'success');
+    } else {
+      showValidationFeedback(`Failed to explain query: ${data.error || 'Unknown error'}`, 'danger');
+    }
+  } catch (err) {
+    console.error('Explain plan error:', err);
+    showValidationFeedback(`Network error explaining plan: ${err.message}`, 'danger');
+  }
+}
+
