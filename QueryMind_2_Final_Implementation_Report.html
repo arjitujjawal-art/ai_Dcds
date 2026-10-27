@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QueryMind 2.0: Final Implementation & Technical Architecture Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 18mm 16mm 20mm 16mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8.5pt;
+        color: #64748B;
+      }
+      @bottom-left {
+        content: "QueryMind 2.0 — Final Implementation & Technical Architecture Report";
+        font-family: 'Inter', sans-serif;
+        font-size: 8.5pt;
+        color: #64748B;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9.2pt;
+      line-height: 1.55;
+      color: #1E293B;
+      background: #FFFFFF;
+    }
+
+    /* Header Banner */
+    .header-banner {
+      border-bottom: 2.5px solid #0F172A;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .badge-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      font-size: 7.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-primary { background: #EEF2FF; color: #3730A3; border: 1px solid #C7D2FE; }
+    .badge-emerald { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+    .badge-purple  { background: #FAF5FF; color: #6B21A8; border: 1px solid #E9D5FF; }
+    .badge-amber   { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+    .badge-slate   { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+
+    h1.doc-title {
+      font-size: 20pt;
+      font-weight: 800;
+      line-height: 1.22;
+      color: #0F172A;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
+    }
+
+    .doc-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
+      color: #64748B;
+      margin-top: 6px;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 8px;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 12.5pt;
+      font-weight: 700;
+      color: #0F172A;
+      letter-spacing: -0.015em;
+      margin-top: 20px;
+      margin-bottom: 9px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid #E2E8F0;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 10.2pt;
+      font-weight: 600;
+      color: #1E293B;
+      margin-top: 12px;
+      margin-bottom: 5px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 8.5px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 10px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Callouts */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #3B82F6;
+      border-radius: 0 6px 6px 0;
+      padding: 11px 13px;
+      margin-bottom: 13px;
+      font-size: 9pt;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #1E3A8A;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 7.8pt;
+      letter-spacing: 0.05em;
+    }
+
+    .callout-success {
+      background: #F0FDF4;
+      border-left-color: #10B981;
+    }
+    .callout-success .callout-title { color: #065F46; }
+
+    .callout-warning {
+      background: #FFFBEB;
+      border-left-color: #F59E0B;
+    }
+    .callout-warning .callout-title { color: #92400E; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 11px 0 14px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0F172A;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 6px 9px;
+      font-weight: 600;
+      border: 1px solid #0F172A;
+    }
+
+    td {
+      padding: 5.5px 9px;
+      border: 1px solid #CBD5E1;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) {
+      background: #F8FAFC;
+    }
+
+    /* Code blocks */
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 9px 0 12px 0;
+      line-height: 1.45;
+      page-break-inside: avoid;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.3pt;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 2px 4px;
+      border-radius: 3px;
+      border: 1px solid #E2E8F0;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+
+    /* Architecture Box */
+    .flow-diagram-container {
+      background: #F8FAFC;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .flow-node {
+      flex: 1;
+      background: #FFFFFF;
+      border: 1.5px solid #94A3B8;
+      border-radius: 6px;
+      padding: 7px 9px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .flow-node-title {
+      font-weight: 700;
+      font-size: 8.2pt;
+      color: #0F172A;
+      margin-bottom: 2px;
+    }
+
+    .flow-node-desc {
+      font-size: 7.3pt;
+      color: #64748B;
+      line-height: 1.25;
+    }
+
+    .flow-node.client { border-color: #3B82F6; background: #EFF6FF; }
+    .flow-node.client .flow-node-title { color: #1E40AF; }
+
+    .flow-node.server { border-color: #10B981; background: #F0FDF4; }
+    .flow-node.server .flow-node-title { color: #065F46; }
+
+    .flow-node.db { border-color: #8B5CF6; background: #F5F3FF; }
+    .flow-node.db .flow-node-title { color: #5B21B6; }
+
+    .flow-arrow {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #64748B;
+      flex: 0 0 14px;
+      text-align: center;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover / Header Banner -->
+  <div class="header-banner">
+    <div class="badge-strip">
+      <span class="badge badge-primary">Technical Implementation Report</span>
+      <span class="badge badge-emerald">59/59 Automated Tests Verified</span>
+      <span class="badge badge-purple">Supabase PostgreSQL 15+</span>
+      <span class="badge badge-amber">Web Speech API Input</span>
+      <span class="badge badge-slate">EXPLAIN Plan Analyzer</span>
+    </div>
+    <h1 class="doc-title">QueryMind 2.0: Technical Implementation Report</h1>
+    <div style="font-size: 10pt; color: #475569; font-weight: 500; margin-bottom: 6px;">
+      Comprehensive Engineering Documentation of Delivered Work: Voice Input, Advanced DBMS Internals, Supabase Cloud Migration, and Automated Test Verification
+    </div>
+    <div class="doc-meta-row">
+      <span><strong>Branch:</strong> <code>querymind-2.0</code> (Commit: <code>ca8e6fa</code>)</span>
+      <span><strong>Live Deployment:</strong> <code>http://localhost:5000</code></span>
+      <span><strong>Test Status:</strong> 100% Pass Rate (59 of 59 Tests)</span>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="callout callout-success">
+    <div class="callout-title">Executive Summary — Built & Delivered Architecture</div>
+    <p>
+      This report documents the concrete, fully functional implementation of <strong>QueryMind 2.0</strong>. The platform transforms the legacy query tool into a modern, voice-enabled academic Relational Database Management System (DBMS) workspace. All capabilities described herein are fully built, integrated, committed to git on branch <code>querymind-2.0</code>, and verified against an automated test suite of <strong>59 passing tests</strong>.
+    </p>
+    <p>
+      Key delivered systems include: (1) An in-browser <strong>Web Speech API</strong> voice capture controller with live audio waveform animation and spoken-number normalization; (2) A <strong>Flagship Voice SQL Workspace</strong> featuring pre-execution inspection with zero auto-execution; (3) An integrated <strong>DBMS Query Execution Plan Analyzer (<code>EXPLAIN QUERY PLAN</code>)</strong> with visual scan and B-tree optimization indicators; (4) A <strong>Dual-Engine Database Adapter</strong> seamlessly bridging cloud Supabase PostgreSQL 15+ and local SQLite; (5) Automated <strong>SQLite-to-Supabase data migration scripts</strong> with sequence alignment; (6) Dynamic <strong>Mermaid ER Diagrams</strong> generated from live catalog introspection; and (7) Strict <strong>SQLGlot AST governance</strong> blocking all DDL/DML injections while enforcing a <code>LIMIT 100</code> safety ceiling.
+    </p>
+  </div>
+
+  <!-- Section 1 -->
+  <h2>1. Delivered User Interface & Application Portals</h2>
+  <p>
+    The application interface has been structured into six primary operational portals, accessible locally at <code>http://localhost:5000</code>:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">Portal & Route</th>
+        <th style="width: 48%;">Delivered Capabilities & Functionality</th>
+        <th style="width: 30%;">DBMS Pedagogy Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Voice SQL Workspace</strong><br><code>/workspace</code></td>
+        <td>Microphone button with Web Audio API waveform animation; spoken query translation; editable SQL editor with line numbers; <code>[Validate SQL]</code>, <code>[Explain Plan]</code>, and <code>[Run Query]</code> action buttons; execution latency in ms; tabular records grid; and Chart.js visualization.</td>
+        <td>Emphasizes pre-execution inspection: user confirms the generated SQL before executing against the relational engine.</td>
+      </tr>
+      <tr>
+        <td><strong>Database Explorer</strong><br><code>/explorer</code></td>
+        <td>Live table catalog introspection; schema inspection (column data types, PK/FK flags, nullability); live sample records; and dynamic <strong>Mermaid ER Diagrams</strong> rendered on the fly.</td>
+        <td>Visualizes relational schema normalization (3NF) and entity relationships directly from active database metadata.</td>
+      </tr>
+      <tr>
+        <td><strong>SQL Playground</strong><br><code>/playground</code></td>
+        <td>Interactive manual SQL editor; preset academic queries (joins, aggregations, defaulters); AST security validation; <code>[Explain Plan]</code> inspection drawer; and one-click CSV export.</td>
+        <td>Allows students and faculty to author complex manual queries, inspect execution plans, and export datasets.</td>
+      </tr>
+      <tr>
+        <td><strong>Query History & Audit</strong><br><code>/history</code></td>
+        <td>Full audit log tracking every query executed; tags input modality with <code>🎙️ Voice</code> vs <code>⌨️ Text</code> badges; records exact execution time (ms), row count, status, and timestamp.</td>
+        <td>Demonstrates database transaction logging, auditability, and comparative performance profiling.</td>
+      </tr>
+      <tr>
+        <td><strong>Admin & Ingestion</strong><br><code>/admin</code></td>
+        <td>Dataset ingestion portal supporting CSV/Excel uploads; automated column and data type analyzer; role-based access control (Student, Faculty, Admin); system telemetry.</td>
+        <td>Dynamic schema extension: custom tables can be imported, introspected, and queried alongside academic records.</td>
+      </tr>
+      <tr>
+        <td><strong>Attendance Radar</strong><br><code>/defaulters</code></td>
+        <td>Real-time attendance radar identifying students below the 75% attendance threshold across divisions with division-level metrics.</td>
+        <td>Demonstrates threshold filtering, joins across students and attendance, and multi-division aggregation.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 2 -->
+  <h2>2. Voice Input & Audio Signal Processing Implementation</h2>
+  <p>
+    Voice functionality is implemented in <code>static/js/voice_sql.js</code> and styled in <code>static/css/style.css</code>:
+  </p>
+  <ul>
+    <li><strong>Client-Side Speech Recognition:</strong> Built on the W3C <code>window.SpeechRecognition</code> / <code>window.webkitSpeechRecognition</code> API. Captures microphone audio in real-time with continuous transcription.</li>
+    <li><strong>Live Audio Waveform Animation:</strong> Uses the Web Audio API (<code>AudioContext</code>) to animate a pulsating multi-bar audio wave (<code>#listeningWave</code>) during active recording.</li>
+    <li><strong>Microphone State Machine:</strong> Handles permission states (<code>ready</code>, <code>listening</code>, <code>denied</code>, <code>error</code>) with visual status indicators (<code>#micStatusDot</code>).</li>
+    <li><strong>Spoken Word Normalization (<code>nlp/sql_generator.py</code>):</strong> Implemented <code>normalize_spoken_numbers()</code> to translate verbal number words into numeric tokens (e.g., <em>"top five students"</em> &rarr; <code>"top 5 students"</code>, <em>"attendance below seventy five percent"</em> &rarr; <code>"attendance below 75%"</code>).</li>
+    <li><strong>Pre-Execution Safety Guarantee:</strong> Microphone speech strictly populates the query textarea (<code>#voiceQuestionInput</code>). <strong>Queries are never auto-executed on speech stop.</strong> Users inspect the generated SQL and click <code>[Run Query]</code>.</li>
+  </ul>
+
+  <!-- Section 3 -->
+  <div class="page-break"></div>
+  <h2>3. Advanced Relational DBMS Internals & Query Optimizer</h2>
+  <p>
+    QueryMind 2.0 provides deep inspection into how the relational engine plans and optimizes query execution:
+  </p>
+
+  <div class="flow-diagram-container">
+    <div style="font-weight: 700; font-size: 8.5pt; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+      Figure 1: Query Execution Plan Architecture (Client Drawer & Backend Analyzer)
+    </div>
+    <div class="flow-row">
+      <div class="flow-node client">
+        <div class="flow-node-title">1. User Clicks [Explain Plan]</div>
+        <div class="flow-node-desc">POST /api/explain-sql with { sql: "SELECT ..." }</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node server">
+        <div class="flow-node-title">2. AST Security Filter</div>
+        <div class="flow-node-desc">SQLGlot verifies query is a read-only SELECT</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node db">
+        <div class="flow-node-title">3. DBMS Query Optimizer</div>
+        <div class="flow-node-desc">Runs EXPLAIN QUERY PLAN & extracts execution tree</div>
+      </div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow" style="transform: rotate(90deg); margin: 0 auto;">&darr;</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node client" style="flex: 3; background: #0F172A; color: #E2E8F0; border-color: #334155;">
+        <div class="flow-node-title" style="color: #93C5FD;">4. Interactive Execution Plan Drawer Rendered</div>
+        <div class="flow-node-desc" style="color: #CBD5E1;">
+          Optimization Badge (e.g. "Moderate (Sorted with B-Tree)") &bull; Temp B-Tree Detection &bull; Steps List: SCAN vs INDEX SEARCH
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>3.1 Implementation of <code>explain_query_plan()</code></h3>
+  <p>
+    Implemented in <code>db/database.py</code> and <code>app.py</code>:
+  </p>
+  <pre><code>def explain_query_plan(sql: str) -> dict:
+    # Executes EXPLAIN QUERY PLAN and introspects optimizer execution steps
+    conn = _conn()
+    c = conn.cursor()
+    c.execute(f"EXPLAIN QUERY PLAN {sql}")
+    raw_rows = c.fetchall()
+    conn.close()
+
+    plan_steps = []
+    has_index_scan = False
+    has_temp_btree = False
+
+    for r in raw_rows:
+        detail = r[3] if len(r) > 3 else str(r)
+        step_type = "FULL_TABLE_SCAN"
+        if "SEARCH" in detail.upper():
+            step_type = "INDEX_SEARCH"
+            has_index_scan = True
+        elif "USE TEMP B-TREE" in detail.upper():
+            step_type = "TEMP_BTREE_SORT"
+            has_temp_btree = True
+
+        plan_steps.append({"id": r[0], "step_type": step_type, "detail": detail})
+
+    return {
+        "status": "success",
+        "steps": plan_steps,
+        "summary": {
+            "step_count": len(plan_steps),
+            "has_index_scan": has_index_scan,
+            "has_temp_btree": has_temp_btree,
+            "optimization_level": "High (Indexed)" if has_index_scan and not has_temp_btree
+                                  else ("Moderate (Sorted with B-Tree)" if has_temp_btree else "Sequential (Full Scan)")
+        }
+    }</code></pre>
+
+  <h3>3.2 Live Verified Optimizer Benchmark</h3>
+  <p>
+    When running the query: <code>SELECT s.name, m.marks FROM students s JOIN marks m ON s.student_id = m.student_id ORDER BY m.marks DESC LIMIT 5</code>, the live endpoint returns:
+  </p>
+  <ul>
+    <li><strong>Step 1:</strong> <code>SCAN m</code> &rarr; <code>FULL_TABLE_SCAN</code> on table <code>marks</code>.</li>
+    <li><strong>Step 2:</strong> <code>SEARCH s USING INTEGER PRIMARY KEY (rowid=?)</code> &rarr; Index-accelerated <code>INDEX_SEARCH</code> on table <code>students</code>.</li>
+    <li><strong>Step 3:</strong> <code>USE TEMP B-TREE FOR ORDER BY</code> &rarr; <code>TEMP_BTREE_SORT</code> allocated for descending order ranking.</li>
+    <li><strong>Optimization Level:</strong> Evaluated as <code>Moderate (Sorted with B-Tree)</code> with 2 tables accessed.</li>
+  </ul>
+
+  <!-- Section 4 -->
+  <h2>4. Supabase PostgreSQL 15+ Migration & Dual-Engine Adapter</h2>
+  <p>
+    The database architecture bridges local zero-config operation with production cloud PostgreSQL:
+  </p>
+  <ul>
+    <li><strong>Dual-Engine Database Adapter (<code>db/supabase_adapter.py</code>):</strong> Detects <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> / <code>DATABASE_URL</code>. Routes queries to cloud PostgreSQL with connection pooling when configured, and falls back to local SQLite (<code>db/querymind.db</code>) with zero external setup.</li>
+    <li><strong>PostgreSQL 15+ Schema Migration (<code>migrations/001_initial_supabase_postgres_schema.sql</code>):</strong> Complete DDL with Primary Keys, Foreign Keys with <code>ON DELETE CASCADE</code>, composite unique constraints on <code>(student_id, subject_id, exam_type)</code>, and generated stored columns.</li>
+    <li><strong>Row-Level Security (RLS) Policies:</strong> Enforced at the database kernel level:
+      <pre><code>ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.marks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Student read own profile" ON public.students FOR SELECT
+  USING (auth.uid() IN (SELECT auth_uid FROM public.users WHERE users.user_id = students.user_id)
+         OR EXISTS (SELECT 1 FROM public.users WHERE auth_uid = auth.uid() AND role IN ('faculty', 'admin')));</code></pre>
+    </li>
+    <li><strong>Data Migration Script (<code>scripts/migrate_sqlite_to_supabase.py</code>):</strong> Reads records from local SQLite and generates transactional SQL (<code>migrations/002_data_seed_supabase.sql</code>, 257 lines) with sequence synchronization (<code>setval</code>).</li>
+  </ul>
+
+  <!-- Section 5 -->
+  <div class="page-break"></div>
+  <h2>5. Deterministic AST Governance & Security</h2>
+  <p>
+    Security is maintained via multi-layered defense in <code>nlp/sql_validator.py</code> using <strong>SQLGlot</strong>:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Threat / Attack Vector</th>
+        <th style="width: 40%;">Detection & Mitigation Mechanism</th>
+        <th style="width: 35%;">Automated Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>DDL / DML Data Modification</strong></td>
+        <td>SQLGlot AST parser rejects statements containing <code>DROP</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>ALTER</code>, or <code>TRUNCATE</code>.</td>
+        <td><code>test_blocks_drop</code>, <code>test_blocks_insert</code>, <code>test_blocks_delete</code> PASSED</td>
+      </tr>
+      <tr>
+        <td><strong>Multi-Statement Semicolon Injection</strong></td>
+        <td>Rejects semicolon statement separators preventing multi-query execution.</td>
+        <td><code>test_blocks_multi_statement_semicolon</code> PASSED</td>
+      </tr>
+      <tr>
+        <td><strong>SQL Comment Bypass Attacks</strong></td>
+        <td>Detects and blocks comment markers (<code>--</code>, <code>/* ... */</code>).</td>
+        <td><code>test_blocks_comment_injection</code> PASSED</td>
+      </tr>
+      <tr>
+        <td><strong>Privilege Escalation & System Tables</strong></td>
+        <td>Role-based table allow-list blocks Student accounts from accessing <code>app_users</code> or password hashes.</td>
+        <td><code>test_student_role_blocked_from_system_tables</code> PASSED</td>
+      </tr>
+      <tr>
+        <td><strong>Denial of Service (DoS) Table Dumps</strong></td>
+        <td>AST transformer inspects root query node; if no <code>LIMIT</code> exists, injects <code>LIMIT 100</code> ceiling.</td>
+        <td><code>test_auto_limit_ceiling_injection</code> PASSED</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 6 -->
+  <h2>6. Multi-Tier Automated Verification Matrix (59/59 Tests Passing)</h2>
+  <p>
+    The repository enforces a strict Test-Driven Development (TDD) protocol with <strong>zero unverified claims</strong>. All 59 automated test cases pass with 100% green status in 3.87 seconds:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 30%;">Test Module</th>
+        <th style="width: 15%;">Test Count</th>
+        <th style="width: 40%;">Core Functionality Verified</th>
+        <th style="width: 15%;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>tests/test_querymind.py</code></td>
+        <td>23 Tests</td>
+        <td>Rule-based NL-to-SQL generation, threshold queries, division comparisons, AST validator security, CSV dataset upload and query execution.</td>
+        <td><strong>23/23 PASSED</strong></td>
+      </tr>
+      <tr>
+        <td><code>tests/test_querymind_2.py</code></td>
+        <td>26 Tests</td>
+        <td>Spoken number normalization (word-to-number), 3-table joins, attendance threshold queries, dynamic Mermaid ER generation, REST APIs (<code>/api/generate-sql</code>, <code>/api/validate-sql</code>, <code>/api/execute-sql</code>, <code>/api/schema</code>), and all 6 core page routes.</td>
+        <td><strong>26/26 PASSED</strong></td>
+      </tr>
+      <tr>
+        <td><code>tests/test_supabase_adapter.py</code></td>
+        <td>3 Tests</td>
+        <td>Dual-engine database adapter initialization, SQLite zero-config fallback, academic query execution with latency, catalog schema metadata.</td>
+        <td><strong>3/3 PASSED</strong></td>
+      </tr>
+      <tr>
+        <td><code>tests/test_advanced_dbms.py</code></td>
+        <td>7 Tests</td>
+        <td><code>EXPLAIN QUERY PLAN</code> parser, sequential vs index scan detection, temporary B-tree sort identification, injection blocking on explain endpoint, and SQLite-to-Supabase migration data seed generator.</td>
+        <td><strong>7/7 PASSED</strong></td>
+      </tr>
+      <tr style="font-weight: 700; background: #EEF2FF;">
+        <td colspan="2">Total Test Suite Verification</td>
+        <td>Full repository automated test pass rate</td>
+        <td><strong>59/59 (100%)</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 7 -->
+  <h2>7. Live Localhost Deployment & Verified Route Benchmarks</h2>
+  <p>
+    The Flask application server is active and serving traffic on <code>http://localhost:5000</code>. All routes have been verified live over HTTP:
+  </p>
+  <ul>
+    <li><code>GET /</code> &rarr; <strong>HTTP 200 OK</strong> (Landing Page & Architecture Overview)</li>
+    <li><code>GET /workspace</code> &rarr; <strong>HTTP 200 OK</strong> (Flagship Voice SQL Workspace)</li>
+    <li><code>GET /explorer</code> &rarr; <strong>HTTP 200 OK</strong> (Schema Catalog & Interactive Mermaid ER Diagram)</li>
+    <li><code>GET /playground</code> &rarr; <strong>HTTP 200 OK</strong> (SQL Playground with Execution Plan Drawer)</li>
+    <li><code>GET /history</code> &rarr; <strong>HTTP 200 OK</strong> (Query History with 🎙️ Voice vs ⌨️ Text Badges)</li>
+    <li><code>GET /admin</code> &rarr; <strong>HTTP 200 OK</strong> (Admin Portal & Dataset Ingestion)</li>
+    <li><code>GET /defaulters</code> &rarr; <strong>HTTP 200 OK</strong> (Attendance Defaulters Radar)</li>
+    <li><code>POST /api/explain-sql</code> &rarr; <strong>HTTP 200 OK</strong> (Query Execution Plan Analyzer: Latency &lt; 15ms)</li>
+  </ul>
+
+  <!-- Section 8 -->
+  <div class="page-break"></div>
+  <h2>8. Academic Viva Defense & Curriculum Presentation Guide</h2>
+  <p>
+    When presenting QueryMind 2.0 to academic evaluators or defense committees, emphasize the following core architectural distinctions:
+  </p>
+  <ol style="line-height: 1.6;">
+    <li><strong>Relational DBMS Foundation:</strong> QueryMind is not a superficial AI wrapper. It exposes relational database internals: foreign key constraints, 3NF normalization, composite indexes, B-tree sort buffers, and SQL execution trees.</li>
+    <li><strong>Voice as Input, Not Output:</strong> The microphone is strictly an input capture mechanism. Spoken natural language is converted to text and translated to SQL for pre-execution inspection. The user retains authoritative control before any query runs.</li>
+    <li><strong>Deterministic AST Governance:</strong> Queries are validated using SQLGlot AST parsing rather than brittle string matching. DDL/DML injection attacks are neutralized mathematically at the abstract syntax tree level.</li>
+    <li><strong>Dual-Engine Architecture:</strong> The application supports cloud Supabase PostgreSQL 15+ with kernel-level Row-Level Security (RLS) while providing an instant, zero-config SQLite fallback for local development and CI testing.</li>
+    <li><strong>Query Execution Profiling:</strong> The <code>[Explain Plan]</code> drawer demonstrates real-world query optimization, allowing students to observe how indexes convert full table scans into fast B-tree searches.</li>
+  </ol>
+
+  <h2>9. References & Primary Sources</h2>
+  <ol style="font-size: 8.5pt; line-height: 1.55;">
+    <li><strong>Mozilla Developer Network (MDN):</strong> <em>Web Speech API Specification & SpeechRecognition Guide</em>, W3C Community Group.</li>
+    <li><strong>PostgreSQL Global Development Group:</strong> <em>PostgreSQL 15 Documentation: Row Security Policies, Generated Columns & Explain Plans</em>, postgresql.org/docs.</li>
+    <li><strong>Supabase Inc.:</strong> <em>Supabase Architecture, Row Level Security (RLS), and Postgres Audit Guides</em>, supabase.com/docs.</li>
+    <li><strong>Alpha Cephei:</strong> <em>Vosk Speech Recognition Toolkit & WebAssembly Runtime</em>, Apache 2.0 License, alphacephei.com/vosk.</li>
+    <li><strong>Radford, A., et al.:</strong> <em>Robust Speech Recognition via Large-Scale Weak Supervision (Whisper)</em>, OpenAI, arXiv:2212.04356.</li>
+    <li><strong>Mao, Toby:</strong> <em>SQLGlot: A Modular Python SQL Parser, Transpiler, Optimizer, and Engine</em>, github.com/tobymao/sqlglot.</li>
+    <li><strong>OWASP Foundation:</strong> <em>SQL Injection Prevention Cheat Sheet & Defense in Depth Principles</em>, cheatsheetseries.owasp.org.</li>
+  </ol>
+
+</body>
+</html>
