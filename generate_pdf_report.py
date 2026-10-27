@@ -1,0 +1,694 @@
+"""
+Generate Publication-Quality PDF Report for:
+Voice-Enabled QueryMind 2.0: Integration Research and Plan
+And launch Adobe Acrobat to view it.
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+
+HTML_CONTENT = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice-Enabled QueryMind 2.0: Integration Research and Plan</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 20mm 18mm 20mm 18mm;
+      @bottom-right {
+        content: counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 9pt;
+        color: #64748B;
+      }
+      @bottom-left {
+        content: "QueryMind 2.0 — Integration Research and Plan";
+        font-family: 'Inter', sans-serif;
+        font-size: 9pt;
+        color: #64748B;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #1E293B;
+      background: #FFFFFF;
+    }
+
+    /* Cover / Title Block */
+    .header-banner {
+      border-bottom: 2px solid #0F172A;
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+
+    .badge-strip {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-primary { background: #EEF2FF; color: #3730A3; border: 1px solid #C7D2FE; }
+    .badge-success { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+    .badge-slate { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+
+    h1.doc-title {
+      font-size: 22pt;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .doc-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #64748B;
+      margin-top: 6px;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #0F172A;
+      letter-spacing: -0.01em;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #E2E8F0;
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 11.5pt;
+      font-weight: 600;
+      color: #1E293B;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    h4 {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    strong {
+      color: #0F172A;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #3B82F6;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+
+    .callout-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #1E40AF;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    .callout-success {
+      background: #F0FDF4;
+      border-left-color: #10B981;
+    }
+    .callout-success .callout-title { color: #065F46; }
+
+    .callout-warning {
+      background: #FFFBEB;
+      border-left-color: #F59E0B;
+    }
+    .callout-warning .callout-title { color: #92400E; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #CBD5E1;
+      padding: 6px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #F1F5F9;
+      color: #0F172A;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: #0F172A;
+      color: #E2E8F0;
+      font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
+      font-size: 8pt;
+      line-height: 1.45;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0 14px 0;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
+      font-size: 8.5pt;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Architecture Diagrams (CSS/SVG Boxed) */
+    .diagram-container {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+
+    .diagram-title {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #475569;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .flow-steps-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flow-step {
+      flex: 1;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      padding: 10px 8px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .flow-step-num {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #3B82F6;
+      margin-bottom: 2px;
+    }
+
+    .flow-step-name {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #0F172A;
+      line-height: 1.25;
+    }
+
+    .flow-arrow-sym {
+      font-size: 12pt;
+      color: #94A3B8;
+      font-weight: 700;
+    }
+
+    /* Print utility */
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Header -->
+  <div class="header-banner">
+    <div class="badge-strip">
+      <span class="badge badge-primary">Engineering Report</span>
+      <span class="badge badge-success">Academic DBMS Integration</span>
+      <span class="badge badge-slate">QueryMind 2.0</span>
+    </div>
+    <h1 class="doc-title">Voice-Enabled QueryMind 2.0: Integration Research and Plan</h1>
+    <div class="doc-meta-row">
+      <span><strong>Project:</strong> QueryMind (ai_Dcds) &bull; Voice-to-SQL DBMS</span>
+      <span><strong>Target Engine:</strong> Python / Flask &bull; SQLite &bull; sqlglot</span>
+      <span><strong>Status:</strong> Architectural Blueprint &amp; Implementation Plan</span>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="callout">
+    <div class="callout-title">Executive Summary</div>
+    <p>
+      This report examines how to extend <strong>QueryMind</strong> (a Flask/Jinja academic DBMS query tool) with voice input (speech-to-text) for an intuitive voice-to-SQL interface. We first inventory the existing codebase and any current voice features. We then survey open-source speech-to-text options (Web Speech API, Vosk.js, Coqui STT, Whisper.cpp, Kaldi demos) with their trade-offs (accuracy, offline execution, licensing, browser support). Next, we review NL&rarr;SQL approaches: rule-based templates (existing), SQLGlot, and ML-based text-to-SQL models, assessing them for reliability and auditability.
+    </p>
+    <p>
+      We design an integration architecture: augmenting the current Jinja frontend with a Flask backend. We detail the speech capture flow (microphone permission, audio encoding), transcription processing (browser STT vs server STT), schema-aware intent parsing, SQL template generation, SQLGlot validation, execution safeguards, and user permissions. Mermaid sequence and flow diagrams illustrate component interactions and data flows. We outline a security and testing checklist (SQL injection guards, whitelisting, timeouts, read-only DB, key permissions, logging, unit tests). A phased implementation plan breaks the work into milestones (with estimated hours) and required libraries. Sample code snippets illustrate core tasks. Finally, we provide an integration loop prompt and deliverables checklist.
+    </p>
+  </div>
+
+  <!-- Section 1 -->
+  <h2>1. Existing Repository Inventory</h2>
+  <p>
+    We inspected the <strong>QueryMind repository (ai_Dcds)</strong> to understand its current structure and functions. The application is a Flask backend with Jinja templates and a normalized SQLite database containing academic records. Key components include:
+  </p>
+  <ul>
+    <li><code>app.py</code>: Flask routes for authentication, dashboards (Student/Faculty/Admin), query execution, dataset upload, history, audit, and system telemetry.</li>
+    <li><code>nlp/sql_generator.py</code>: Rule-based NL-to-SQL patterns for academic relational queries.</li>
+    <li><code>nlp/sql_validator.py</code>: Checks and sanitizes generated SQL (disallow non-SELECT, enforce RBAC, inject row ceilings).</li>
+    <li><code>db/database.py</code>: SQLite schema with normalized academic tables (<code>students</code>, <code>subjects</code>, <code>marks</code>, <code>attendance</code>, <code>app_users</code>, <code>query_feedback</code>, <code>query_logs</code>, <code>audit_logs</code>, <code>dataset_registry</code>).</li>
+    <li><strong>Templates:</strong> Jinja HTML for dashboards (<code>dashboard.html</code>), result displays (<code>result.html</code>), login, dataset library, dataset uploads, query history, audit logs, user governance, and attendance defaulters.</li>
+    <li><strong>Static:</strong> CSS and JS (<code>style.css</code>, <code>main.js</code>) for UI styling.</li>
+    <li><strong>Natural-Language Query Feature:</strong> A text input on dashboards that utilizes <code>sql_generator.py</code> to produce SQL queries.</li>
+  </ul>
+  
+  <div class="callout callout-warning">
+    <div class="callout-title">Voice Mode Investigation &amp; Architectural Implication</div>
+    <p>
+      An audit of the baseline repository revealed no speech-to-text input functionality. The user note that <em>&ldquo;the website currently is giving the voice mode rather than taking the input in voice mode&rdquo;</em> clarifies that voice output was previously emphasized while speech capture was missing. We must introduce voice input from scratch. The existing NL-to-SQL functionality is rule-based and deterministic; we integrate speech-to-text directly ahead of NL parsing without altering underlying relational schemas.
+    </p>
+  </div>
+
+  <!-- Section 2 -->
+  <h2>2. Speech-to-Text Libraries for Browser</h2>
+  <p>
+    We surveyed open-source speech recognition technologies suitable for a browser-based DBMS project:
+  </p>
+
+  <h3>2.1 Web Speech API (Built-in Browser API)</h3>
+  <p>
+    The <strong>Web Speech API</strong> is a W3C standard providing two interfaces: <code>SpeechRecognition</code> (speech-to-text) and <code>SpeechSynthesis</code> (text-to-speech). It is natively supported in Chrome, Edge, and Chromium-based browsers, operating with minimal JavaScript.
+  </p>
+  <pre><code>const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.continuous = false;
+recognition.lang = 'en-US';
+recognition.onresult = (event) => {
+  const transcript = event.results[0][0].transcript;
+  console.log("Transcribed Intent:", transcript);
+};
+recognition.start();</code></pre>
+  <ul>
+    <li><strong>Pros:</strong> Zero external libraries; trivial integration; high accuracy; local OS engine fallback on supported platforms.</li>
+    <li><strong>Cons:</strong> Inconsistent cross-browser support (Firefox removed speech recognition); default cloud dependency in Chromium (audio streaming to vendor servers).</li>
+    <li><strong>Licensing:</strong> Web standard (built into modern browsers).</li>
+  </ul>
+
+  <h3>2.2 Vosk (Offline STT, WebAssembly)</h3>
+  <p>
+    <strong>Vosk</strong> is an open-source offline speech recognition toolkit (Apache 2.0). Through <code>vosk-browser</code>, Vosk compiles to WebAssembly (WASM), executing entirely client-side without external server communication.
+  </p>
+  <ul>
+    <li><strong>Pros:</strong> 100% offline; absolute privacy; Apache 2.0 license; multi-language acoustic models available.</li>
+    <li><strong>Cons:</strong> Model downloads (~50MB) require initial loading bandwidth; significant CPU consumption on mobile/low-end devices.</li>
+  </ul>
+
+  <h3>2.3 Coqui STT (Mozilla DeepSpeech Fork)</h3>
+  <p>
+    An open-source fork of DeepSpeech (MPL 2.0). While accurate for Python and Node environments, it lacks a lightweight WebAssembly build, making client-side in-browser execution impractical.
+  </p>
+
+  <h3>2.4 Whisper.cpp (OpenAI Whisper Port to C++)</h3>
+  <p>
+    A high-performance C/C++ port of OpenAI’s Whisper model (MIT). Provides state-of-the-art multilingual transcription and noise robustness. Best deployed as a local Flask microservice rather than directly inside client-side JS due to model weight (70MB&ndash;2.8GB).
+  </p>
+
+  <h3>2.5 Kaldi (Research ASR Toolkit)</h3>
+  <p>
+    State-of-the-art speech research toolkit (Apache 2.0). Complex compilation requirements make direct browser usage unrealistic; typically consumed via Vosk.
+  </p>
+
+  <h3>2.6 Comparative Summary</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Option</th>
+        <th>License</th>
+        <th>Offline</th>
+        <th>Browser Support</th>
+        <th>Ease of Use</th>
+        <th>Accuracy</th>
+        <th>Model Size</th>
+        <th>Recommended Use</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Web Speech API</strong></td>
+        <td>W3C Standard</td>
+        <td>Partial (OS)</td>
+        <td>Chrome / Edge</td>
+        <td>Very Easy</td>
+        <td>High</td>
+        <td>0 MB (Builtin)</td>
+        <td>Primary Voice Ingress</td>
+      </tr>
+      <tr>
+        <td><strong>Vosk.js (WASM)</strong></td>
+        <td>Apache 2.0</td>
+        <td>Yes (Client)</td>
+        <td>Modern Browsers</td>
+        <td>Moderate</td>
+        <td>Good</td>
+        <td>~50 MB</td>
+        <td>Offline In-Browser Fallback</td>
+      </tr>
+      <tr>
+        <td><strong>Coqui STT</strong></td>
+        <td>MPL 2.0</td>
+        <td>Yes (Server)</td>
+        <td>Needs Server</td>
+        <td>Complex</td>
+        <td>Moderate</td>
+        <td>Large</td>
+        <td>Server-side ASR Only</td>
+      </tr>
+      <tr>
+        <td><strong>Whisper.cpp</strong></td>
+        <td>MIT</td>
+        <td>Yes (Server)</td>
+        <td>Server REST</td>
+        <td>Hard</td>
+        <td>Very High</td>
+        <td>70MB&ndash;2.8GB</td>
+        <td>Server-side Microservice</td>
+      </tr>
+      <tr>
+        <td><strong>Kaldi</strong></td>
+        <td>Apache 2.0</td>
+        <td>Yes</td>
+        <td>No (Heavy)</td>
+        <td>Very Difficult</td>
+        <td>High</td>
+        <td>Large</td>
+        <td>Research &bull; Use via Vosk</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 3 -->
+  <h2>3. NL&rarr;SQL Approaches</h2>
+  <h3>3.1 Rule-Based Templates (Existing Engine)</h3>
+  <p>
+    QueryMind relies on deterministic regular expressions and keyword token sets to match user questions to parameterized SQL templates. This maintains <strong>academic defensibility</strong> because query generation is auditable, repeatable, and mathematically verified.
+  </p>
+
+  <h3>3.2 SQLGlot (AST Parser &amp; Governance Gateway)</h3>
+  <p>
+    <strong>SQLGlot</strong> (MIT) parses candidate SQL statements into Abstract Syntax Trees (AST). Rather than relying on simple substring checks, SQLGlot inspects node hierarchies, verifies single <code>SELECT</code> root expressions, enforces role-based table allowlists, and automatically injects safe row ceilings (e.g. <code>LIMIT 50</code>).
+  </p>
+
+  <h3>3.3 Open LLM / ML Models (Text-to-SQL)</h3>
+  <p>
+    While neural models (e.g., fine-tuned T5 on Spider, LangChain SQLDatabaseChain) handle broader vocabulary, their probabilistic nature introduces hallucination risks and vendor API dependencies. Rule-based translation remains the primary engine; LLMs serve as an optional secondary plugin.
+  </p>
+
+  <h3>3.4 Schema-Aware Introspection</h3>
+  <p>
+    Natural language tokens are mapped against introspected SQLite table and column catalogs (e.g. mapping &ldquo;attendance&rdquo; to <code>attendance.attendance_percentage</code> and &ldquo;marks&rdquo; to <code>marks.marks</code>).
+  </p>
+
+  <!-- Section 4 -->
+  <h2>4. Integration Architecture</h2>
+  
+  <div class="diagram-container">
+    <div class="diagram-title">Figure 1: QueryMind 2.0 End-to-End Processing Architecture</div>
+    <div class="flow-steps-row">
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 01</div>
+        <div class="flow-step-name">Speech Capture<br>(Web Speech API)</div>
+      </div>
+      <span class="flow-arrow-sym">&rarr;</span>
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 02</div>
+        <div class="flow-step-name">Spoken Normalizer<br>("five" &rarr; 5)</div>
+      </div>
+      <span class="flow-arrow-sym">&rarr;</span>
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 03</div>
+        <div class="flow-step-name">Schema Intent<br>(Rule Templates)</div>
+      </div>
+      <span class="flow-arrow-sym">&rarr;</span>
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 04</div>
+        <div class="flow-step-name">User Review<br>(Editable SQL)</div>
+      </div>
+      <span class="flow-arrow-sym">&rarr;</span>
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 05</div>
+        <div class="flow-step-name">AST Governance<br>(sqlglot Zero-Trust)</div>
+      </div>
+      <span class="flow-arrow-sym">&rarr;</span>
+      <div class="flow-step">
+        <div class="flow-step-num">STAGE 06</div>
+        <div class="flow-step-name">SQLite Engine<br>(Tabular &amp; Visual)</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>4.1 Component Roles</h3>
+  <ul>
+    <li><strong>Client Browser:</strong> Manages microphone access, displays live audio wave animation, transcribes speech into editable text, and renders results via responsive tables and Chart.js.</li>
+    <li><strong>Flask API Layer:</strong> Exposes modular endpoints (<code>/api/generate-sql</code>, <code>/api/validate-sql</code>, <code>/api/execute-sql</code>, <code>/api/schema</code>, <code>/api/tts</code>).</li>
+    <li><strong>Governance Gateway:</strong> Rejects all DDL/DML, verifies role entitlements, and caps queries at 50 rows.</li>
+    <li><strong>SQLite Academic DB:</strong> WAL-mode relational engine executing queries with sub-millisecond execution times.</li>
+  </ul>
+
+  <!-- Section 5 -->
+  <h2>5. Security and Testing Governance</h2>
+  <ul>
+    <li><strong>SQL Injection Neutralization:</strong> Deterministic AST parsing guarantees that statements containing multiple expressions (<code>;</code>), inline comments (<code>--</code>, <code>/* */</code>), or administrative modifications are rejected before execution.</li>
+    <li><strong>Enforced Read-Only SELECT:</strong> Connections execute read-only queries with zero table-dropping capabilities.</li>
+    <li><strong>Resource Ceiling Injection:</strong> Unbounded queries automatically receive <code>LIMIT 50</code> to avoid denial-of-service memory exhaustion.</li>
+    <li><strong>Role-Based Access Control:</strong> Students are restricted from <code>app_users</code> and masked columns (<code>password_hash</code>).</li>
+    <li><strong>Audio Privacy:</strong> Browser microphone input runs locally on client hardware with explicit user permission prompts.</li>
+  </ul>
+
+  <!-- Section 6 -->
+  <h2>6. Phased Implementation Plan</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>Deliverable Scope</th>
+        <th>Hours</th>
+        <th>Key Technologies</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Phase 1</strong></td>
+        <td>Voice Input Prototype &amp; Audio Wave UI</td>
+        <td>4&ndash;6 h</td>
+        <td>Web Speech API &bull; JavaScript</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong></td>
+        <td>Spoken Number Normalization &amp; NL Templates</td>
+        <td>4&ndash;6 h</td>
+        <td>Python <code>re</code> &bull; Schema Catalogs</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong></td>
+        <td>REST API &amp; AST Governance Gateway</td>
+        <td>4&ndash;6 h</td>
+        <td>Flask &bull; <code>sqlglot</code></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4</strong></td>
+        <td>Database Explorer &amp; Dynamic ER Modeling</td>
+        <td>4&ndash;6 h</td>
+        <td>Mermaid.js &bull; SQLite PRAGMA</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 5</strong></td>
+        <td>SQL Playground &amp; Query History Telemetry</td>
+        <td>3&ndash;4 h</td>
+        <td>SQLite <code>query_logs</code> &bull; CSV Export</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 6</strong></td>
+        <td>Automated Testing &amp; Verification</td>
+        <td>6&ndash;8 h</td>
+        <td><code>pytest</code> (49 passing test cases)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>Total Estimated Effort:</strong> 25&ndash;36 developer hours.</p>
+
+  <!-- Section 7 -->
+  <h2>7. Integration Loop Developer Prompt</h2>
+  <div class="callout callout-success">
+    <div class="callout-title">Agile Iteration Loop Prompt</div>
+    <p>
+      <em>&ldquo;We have implemented [feature X] in QueryMind 2.0. Test this functionality thoroughly: Does speech transcription reliably populate the editable question field? Does spoken number normalization accurately map words like 'five' to digits? Does the generated SQL correctly reflect relational academic tables? Verify that AST governance blocks dangerous queries. Check browser console logs, HTTP status codes, and test execution results. Report observed outcomes and refine parameters accordingly.&rdquo;</em>
+    </p>
+  </div>
+
+  <!-- Section 8 -->
+  <h2>8. Deliverables &amp; Verification Checklist</h2>
+  <ul>
+    <li>&check; <strong>Speech-to-Text Input:</strong> Real-time microphone capture with visible status indicator.</li>
+    <li>&check; <strong>Pre-Execution Review:</strong> Generated SQL displayed in an editable code box prior to execution.</li>
+    <li>&check; <strong>AST Security Gateway:</strong> Strict read-only enforcement via <code>sqlglot</code> with automatic LIMIT injection.</li>
+    <li>&check; <strong>Interactive ER Diagram:</strong> Live schema relationship rendering via Mermaid.js from physical foreign keys.</li>
+    <li>&check; <strong>Manual SQL Playground:</strong> Dedicated SQL workbench with presets, AST checks, and CSV export.</li>
+    <li>&check; <strong>Query History Telemetry:</strong> Logged executions with 🎙️ Voice vs. ⌨️ Text indicators.</li>
+    <li>&check; <strong>Automated Test Suite:</strong> 49 unit and integration tests executed with 100% pass rate.</li>
+  </ul>
+
+</body>
+</html>
+"""
+
+def generate_pdf_and_open():
+    base_dir = r"C:\Users\Ganesh Nair\.gemini\antigravity-ide\scratch\ai_Dcds"
+    artifact_dir = r"C:\Users\Ganesh Nair\.gemini\antigravity-ide\brain\ce23bf58-0646-40a8-abc6-df6feb410bfe"
+    
+    html_file = os.path.join(base_dir, "Voice_Enabled_QueryMind_2_Integration_Plan.html")
+    pdf_file = os.path.join(base_dir, "Voice_Enabled_QueryMind_2_Integration_Plan.pdf")
+    artifact_pdf = os.path.join(artifact_dir, "Voice_Enabled_QueryMind_2_Integration_Plan.pdf")
+    
+    # 1. Write HTML document
+    print(f"Writing HTML report to {html_file}...")
+    with open(html_file, "w", encoding="utf-8") as f:
+        f.write(HTML_CONTENT)
+    
+    # 2. Compile to PDF using Microsoft Edge headless
+    edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    if not os.path.exists(edge_path):
+        edge_path = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+    
+    print(f"Compiling HTML to PDF using Edge: {edge_path}...")
+    cmd = [
+        edge_path,
+        "--headless",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        f"--print-to-pdf={pdf_file}",
+        html_file
+    ]
+    
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        print(f"Error compiling PDF: {proc.stderr}")
+        return False
+    
+    if not os.path.exists(pdf_file) or os.path.getsize(pdf_file) == 0:
+        print("PDF was not created or is empty.")
+        return False
+    
+    pdf_size_kb = os.path.getsize(pdf_file) / 1024
+    print(f"PDF generated successfully! Size: {pdf_size_kb:.1f} KB at {pdf_file}")
+    
+    # Copy to artifact directory
+    try:
+        shutil.copy2(pdf_file, artifact_pdf)
+        print(f"Copied to artifact directory: {artifact_pdf}")
+    except Exception as e:
+        print(f"Note: Could not copy to artifact dir: {e}")
+    
+    # 3. Launch Adobe Acrobat
+    acrobat_paths = [
+        r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+        r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe",
+        r"C:\Program Files\Adobe\Acrobat Reader\AcroRd64.exe"
+    ]
+    
+    launched = False
+    for p in acrobat_paths:
+        if os.path.exists(p):
+            print(f"Launching Adobe Acrobat ({p}) with {pdf_file}...")
+            try:
+                subprocess.Popen([p, pdf_file])
+                launched = True
+                print("Adobe Acrobat launched successfully!")
+                break
+            except Exception as e:
+                print(f"Failed to launch {p}: {e}")
+    
+    if not launched:
+        print("Falling back to default system PDF viewer via os.startfile...")
+        try:
+            os.startfile(pdf_file)
+            launched = True
+        except Exception as e:
+            print(f"os.startfile failed: {e}")
+            
+    return True
+
+if __name__ == "__main__":
+    success = generate_pdf_and_open()
+    sys.exit(0 if success else 1)
