@@ -17,7 +17,7 @@ import asyncio
 import edge_tts
 
 # ── Local imports ─────────────────────────────────────────────────────────────
-from nlp.sql_generator import generate_sql, generate_sql_for_dataset
+from nlp.sql_generator import generate_sql, generate_sql_for_dataset, _tokens
 from nlp.intent_classifier import (
     classify_intent,
     DATABASE_QUERY,
@@ -461,31 +461,24 @@ def query():
 
         nlp = generate_sql(question)
     
-    # If standard academic patterns did not match, check uploaded datasets
+    # If standard academic patterns did not match, check uploaded datasets (only if not an academic entity query)
     if not nlp["matched"]:
-        all_ds = get_uploaded_datasets()
-        for ds in all_ds:
-            name_words = [w.lower() for w in re.findall(r"\w+", ds["display_name"])]
-            tbl_words  = [w.lower() for w in re.findall(r"\w+", ds["table_name"])]
-            q_lower    = question.lower()
-            if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
-                schema = get_dataset_schema(ds["table_name"])
-                if schema:
-                    cols = schema.get("all_columns", [])
-                    candidate = generate_sql_for_dataset(question, ds["table_name"], cols)
-                    if candidate.get("matched"):
-                        nlp = candidate
-                        nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
-                        break
-        # If still not matched and there's only 1 uploaded dataset, try matching it
-        if not nlp["matched"] and len(all_ds) == 1:
-            schema = get_dataset_schema(all_ds[0]["table_name"])
-            if schema:
-                cols = schema.get("all_columns", [])
-                candidate = generate_sql_for_dataset(question, all_ds[0]["table_name"], cols)
-                if candidate.get("matched"):
-                    nlp = candidate
-                    nlp["description"] = f"{nlp['description']} [{all_ds[0]['display_name']}]"
+        q_toks = _tokens(question)
+        if not any(k in q_toks for k in ("student", "attendance", "subject", "division", "department")):
+            all_ds = get_uploaded_datasets()
+            for ds in all_ds:
+                name_words = [w.lower() for w in re.findall(r"\w+", ds["display_name"])]
+                tbl_words  = [w.lower() for w in re.findall(r"\w+", ds["table_name"])]
+                q_lower    = question.lower()
+                if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
+                    schema = get_dataset_schema(ds["table_name"])
+                    if schema:
+                        cols = schema.get("all_columns", [])
+                        candidate = generate_sql_for_dataset(question, ds["table_name"], cols)
+                        if candidate.get("matched"):
+                            nlp = candidate
+                            nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                            break
 
     sql = nlp["sql"]
 
@@ -955,19 +948,25 @@ def api_generate_sql():
     if not nlp or not nlp.get("matched"):
         nlp = generate_sql(question)
 
-    # Check custom datasets if academic did not match
+    # Check custom datasets ONLY if academic did not match and question is not an academic entity query
     if not nlp or not nlp.get("matched"):
-        try:
-            for ds in all_ds:
-                schema = get_dataset_schema(ds["table_name"])
-                if schema:
-                    candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
-                    if candidate.get("matched") and candidate.get("sql"):
-                        nlp = candidate
-                        nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
-                        break
-        except Exception:
-            pass
+        q_toks = _tokens(question)
+        if not any(k in q_toks for k in ("student", "attendance", "subject", "division", "department")):
+            try:
+                for ds in all_ds:
+                    name_words = [w.lower() for w in re.findall(r"\w+", ds.get("display_name", ""))]
+                    tbl_words  = [w.lower() for w in re.findall(r"\w+", ds.get("table_name", ""))]
+                    q_lower    = question.lower()
+                    if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
+                        schema = get_dataset_schema(ds["table_name"])
+                        if schema:
+                            candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
+                            if candidate.get("matched") and candidate.get("sql"):
+                                nlp = candidate
+                                nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                                break
+            except Exception:
+                pass
 
     if nlp and nlp.get("matched") and nlp.get("sql"):
         return jsonify({

@@ -184,6 +184,35 @@ class TestApiGenerateSqlRegression:
         assert "GROUP BY" in data["sql"].upper()
 
 
+    def test_student_name_list_query_targets_students_table_not_exam_scores(self, client):
+        """CRITICAL DEFECT REGRESSION TEST: Verifies that 'can I get the name list of students' generates SQL for students, never exam_scores."""
+        queries = [
+            "can I get the name list of students",
+            "list of students",
+            "student names",
+            "names of students",
+            "name list of students",
+            "student list",
+            "get students",
+            "show students",
+            "can I get the list of students",
+            "give me student names",
+            "list all students",
+        ]
+        for q in queries:
+            resp = client.post("/api/generate-sql",
+                               data=json.dumps({"question": q}),
+                               content_type="application/json")
+            assert resp.status_code == 200, f"Failed for query: {q}"
+            data = resp.get_json()
+            assert data["status"] == "success", f"Query '{q}' failed with data: {data}"
+            assert data["sql"] is not None, f"Query '{q}' returned null SQL"
+            sql_lower = data["sql"].lower()
+            assert "from students" in sql_lower, f"Query '{q}' generated SQL without students table: {data['sql']}"
+            assert "exam_scores" not in sql_lower, f"Query '{q}' hijacked by exam_scores: {data['sql']}"
+            assert "exam_scores" not in data.get("description", "").lower(), f"Description hijacked: {data}"
+
+
 class TestFormQueryEndpointRegression:
     """Regression tests for traditional form submission route /query."""
 
@@ -193,3 +222,10 @@ class TestFormQueryEndpointRegression:
         html = resp.get_data(as_text=True)
         assert "Please ask a question about the connected database." in html
         assert "SELECT * FROM" not in html
+
+    def test_form_query_student_name_list_targets_students(self, client):
+        resp = client.post("/query", data={"question": "can I get the name list of students"}, follow_redirects=True)
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+        assert "SELECT student_id, name, division, email FROM students" in html
+        assert 'SELECT * FROM "exam_scores"' not in html
