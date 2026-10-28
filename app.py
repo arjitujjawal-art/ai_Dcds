@@ -141,11 +141,98 @@ def inject_global_ui_context():
         datasets = get_uploaded_datasets()
     except Exception:
         datasets = []
+
+    active_table = session.get("active_dataset_table", "academic")
+    active_name = "Academic Relational DB"
+    if active_table == "all":
+        active_name = "All Connected Tables"
+    elif active_table != "academic":
+        for ds in datasets:
+            if ds["table_name"] == active_table:
+                active_name = ds["display_name"]
+                break
+        else:
+            # If specified table no longer exists, safely fall back to academic
+            active_table = "academic"
+            session["active_dataset_table"] = "academic"
+            active_name = "Academic Relational DB"
+
     return {
         "current_role": session.get("role", "admin"),
         "current_username": session.get("username", "admin"),
         "global_datasets": datasets,
+        "active_dataset_table": active_table,
+        "active_dataset_name": active_name,
     }
+
+
+# ── Global Dataset Switcher ───────────────────────────────────────────────────
+@app.route("/switch-dataset/<target_dataset>")
+def switch_dataset(target_dataset):
+    """Globally switch the active dataset scope and redirect back seamlessly."""
+    all_ds = get_uploaded_datasets()
+    valid_tables = {"academic", "all"} | {d["table_name"] for d in all_ds}
+
+    if target_dataset in valid_tables:
+        session["active_dataset_table"] = target_dataset
+        if target_dataset == "academic":
+            session["active_dataset_name"] = "Academic Relational DB"
+            flash("Switched active dataset to Academic Relational DB (Students, Marks, etc.)", "info")
+        elif target_dataset == "all":
+            session["active_dataset_name"] = "All Connected Tables"
+            flash("Switched active dataset to All Connected Tables (Unified Schema)", "info")
+        else:
+            name = target_dataset
+            for d in all_ds:
+                if d["table_name"] == target_dataset:
+                    name = d["display_name"]
+                    break
+            session["active_dataset_name"] = name
+            flash(f"Switched active dataset to {name}", "info")
+    else:
+        flash(f"Dataset '{target_dataset}' not found.", "warning")
+
+    # Intelligently preserve or update query param on redirection
+    ref = request.referrer
+    act = session.get("active_dataset_table", "academic")
+    if ref:
+        if "/explorer" in ref:
+            return redirect(url_for("database_explorer", dataset=act))
+        if "/workspace" in ref or "/voice-sql" in ref:
+            return redirect(url_for("voice_sql_workspace", dataset=act))
+        if "/playground" in ref:
+            return redirect(url_for("sql_playground", dataset=act))
+        return redirect(ref)
+    return redirect(url_for("database_explorer", dataset=act))
+
+
+@app.route("/api/set-active-dataset", methods=["POST"])
+def api_set_active_dataset():
+    """Asynchronous endpoint to switch active dataset state from any page element."""
+    data = request.get_json(silent=True) or {}
+    target_dataset = data.get("dataset", "academic")
+    all_ds = get_uploaded_datasets()
+    valid_tables = {"academic", "all"} | {d["table_name"] for d in all_ds}
+
+    if target_dataset not in valid_tables:
+        return jsonify({"status": "error", "message": f"Dataset '{target_dataset}' not found"}), 404
+
+    session["active_dataset_table"] = target_dataset
+    active_name = "Academic Relational DB"
+    if target_dataset == "all":
+        active_name = "All Connected Tables"
+    elif target_dataset != "academic":
+        for d in all_ds:
+            if d["table_name"] == target_dataset:
+                active_name = d["display_name"]
+                break
+    session["active_dataset_name"] = active_name
+
+    return jsonify({
+        "status": "success",
+        "active_dataset_table": target_dataset,
+        "active_dataset_name": active_name
+    })
 
 
 # ── Role Perspective Switcher ─────────────────────────────────────────────────
@@ -210,24 +297,56 @@ def home():
 @app.route("/voice-sql")
 def voice_sql_workspace():
     all_ds = get_uploaded_datasets()
+    req_dataset = request.args.get("dataset")
+    if req_dataset:
+        session["active_dataset_table"] = req_dataset
+    active_dataset = session.get("active_dataset_table", "academic")
     prefill = request.args.get("q", "").strip()
     return render_template(
         "voice_sql_workspace.html",
         all_datasets=all_ds,
         prefill_question=prefill,
+        active_dataset_table=active_dataset,
     )
 
 
 @app.route("/explorer")
 def database_explorer():
-    meta = get_database_schema_metadata()
-    return render_template("explorer.html", schema_meta=meta)
+    all_ds = get_uploaded_datasets()
+    req_dataset = request.args.get("dataset")
+    if req_dataset:
+        session["active_dataset_table"] = req_dataset
+    selected_dataset = session.get("active_dataset_table", "academic")
+
+    valid_tables = {"academic", "all"} | {d["table_name"] for d in all_ds}
+    if selected_dataset not in valid_tables:
+        selected_dataset = "academic"
+        session["active_dataset_table"] = "academic"
+
+    meta = get_database_schema_metadata(target_dataset=selected_dataset)
+    return render_template(
+        "explorer.html",
+        schema_meta=meta,
+        selected_dataset=selected_dataset,
+        all_datasets=all_ds,
+    )
 
 
 @app.route("/playground")
 def sql_playground():
-    meta = get_database_schema_metadata()
-    return render_template("playground.html", schema_meta=meta)
+    all_ds = get_uploaded_datasets()
+    req_dataset = request.args.get("dataset")
+    if req_dataset:
+        session["active_dataset_table"] = req_dataset
+    active_dataset = session.get("active_dataset_table", "academic")
+
+    meta = get_database_schema_metadata(target_dataset=active_dataset)
+    return render_template(
+        "playground.html",
+        schema_meta=meta,
+        active_dataset_table=active_dataset,
+        all_datasets=all_ds,
+    )
 
 
 @app.route("/admin")
@@ -283,7 +402,9 @@ def upload_dataset_file():
         flash(f"Upload failed: {res['error']}", "danger")
         return redirect(url_for("portal1"))
 
-    flash(f"Dataset '{res['display_name']}' successfully uploaded and auto-analyzed! 🚀", "success")
+    session["active_dataset_table"] = res["table_name"]
+    session["active_dataset_name"] = res["display_name"]
+    flash(f"Dataset '{res['display_name']}' successfully uploaded and set as active dataset! 🚀", "success")
     return redirect(url_for("portal1", table=res["table_name"]))
 
 
@@ -714,10 +835,13 @@ def dataset_upload():
             flash(f"Upload failed: {result['error']}", "danger")
             return redirect(request.url)
 
+        session["active_dataset_table"] = result["table_name"]
+        session["active_dataset_name"] = result["display_name"]
+
         log_audit("dataset_upload", session["user_id"], session["username"],
                   details={"file": filename, "table": result["table_name"],
                            "rows": result["row_count"]})
-        flash(f"✅ Dataset '{result['display_name']}' uploaded! {result['row_count']} rows, "
+        flash(f"✅ Dataset '{result['display_name']}' uploaded and activated! {result['row_count']} rows, "
               f"{len(result['columns'])} columns.", "success")
         return redirect(url_for("dataset_view", table_name=result["table_name"]))
 
@@ -1119,8 +1243,9 @@ def api_explain_sql():
 
 @app.route("/api/schema")
 def api_schema():
-    """Return live database metadata and generated Mermaid ER diagram."""
-    meta = get_database_schema_metadata()
+    """Return live database metadata and generated Mermaid ER diagram, optionally filtered by dataset."""
+    req_dataset = request.args.get("dataset") or session.get("active_dataset_table", "academic")
+    meta = get_database_schema_metadata(target_dataset=req_dataset)
     return jsonify(meta)
 
 

@@ -16,8 +16,19 @@
       </p>
     </div>
     <div class="ehb-right">
+      <div class="explorer-dataset-control">
+        <label for="explorerDatasetSelector" class="eds-label">Dataset Scope:</label>
+        <select id="explorerDatasetSelector" class="explorer-select" onchange="switchExplorerDataset(this.value)">
+          <option value="academic" {% if selected_dataset == 'academic' %}selected{% endif %}>🎓 Academic Relational DB (4 Tables)</option>
+          {% for ds in all_datasets %}
+          <option value="{{ ds.table_name }}" {% if selected_dataset == ds.table_name %}selected{% endif %}>📊 {{ ds.display_name }} ({{ ds.row_count }} rows)</option>
+          {% endfor %}
+          <option value="all" {% if selected_dataset == 'all' %}selected{% endif %}>🌐 All Connected Tables (Unified Schema)</option>
+        </select>
+      </div>
+
       <div class="schema-stats-badge">
-        <span><strong>{{ schema_meta.tables|length }}</strong> Tables</span>
+        <span><strong>{{ schema_meta.tables|length }}</strong> Tables In Scope</span>
         <span class="sep">&bull;</span>
         <span><strong>{{ schema_meta.relationships|length }}</strong> Foreign Key Constraints</span>
         <span class="sep">&bull;</span>
@@ -187,14 +198,26 @@
     <div class="er-card">
       <div class="er-card-header">
         <div>
+          <div class="er-scope-indicator">
+            <span class="dsp-dot"></span>
+            <span class="er-scope-name">{{ active_dataset_name }} Scope</span>
+          </div>
           <h2 class="card-main-title">Entity-Relationship (ER) Architecture</h2>
-          <p class="card-sub-title">Dynamically constructed from SQLite schema catalogs and foreign-key constraints.</p>
+          <p class="card-sub-title">Dynamically rendered for <strong>{{ active_dataset_name }}</strong> schema and relational constraints.</p>
         </div>
         <div class="er-header-actions">
-          <div class="er-legend">
-            <span class="legend-item"><span class="badge-pk">PK</span> Primary Key</span>
-            <span class="legend-item"><span class="badge-fk">FK</span> Foreign Key</span>
-            <span class="legend-item"><span class="legend-connector">||--o{</span> 1-to-Many Relationship</span>
+          <div class="er-dataset-quick-switcher">
+            <button type="button" class="er-scope-chip {% if selected_dataset == 'academic' %}active{% endif %}" onclick="switchExplorerDataset('academic')">
+              🎓 Academic
+            </button>
+            {% for ds in all_datasets %}
+            <button type="button" class="er-scope-chip {% if selected_dataset == ds.table_name %}active{% endif %}" onclick="switchExplorerDataset('{{ ds.table_name }}')">
+              📊 {{ ds.display_name }}
+            </button>
+            {% endfor %}
+            <button type="button" class="er-scope-chip {% if selected_dataset == 'all' %}active{% endif %}" onclick="switchExplorerDataset('all')">
+              🌐 All Tables
+            </button>
           </div>
           <button type="button" class="btn-refresh-er" onclick="renderErDiagram(true)">
             <span>🔄</span> Re-render Diagram
@@ -345,6 +368,11 @@
       schemaView.classList.remove('hidden');
       erView.classList.add('hidden');
     }
+  }
+
+  function switchExplorerDataset(newDataset) {
+    const isErTab = document.getElementById('tabErBtn')?.classList.contains('active');
+    window.location.href = `/explorer?dataset=${encodeURIComponent(newDataset)}${isErTab ? '&tab=er' : ''}`;
   }
 
   // Handle direct tab access from URL hash or query params

@@ -252,3 +252,58 @@ class TestCorePageRoutes:
         assert "QueryMind" in data["service"]
         assert "timestamp" in data
 
+
+class TestDynamicDatasetScopeAndERDiagram:
+    def test_er_diagram_scoped_to_academic(self):
+        meta = get_database_schema_metadata(target_dataset="academic")
+        mermaid = meta["er_mermaid"]
+        assert "erDiagram" in mermaid
+        assert "students" in mermaid
+        assert "subjects" in mermaid
+        assert "company_employees" not in mermaid
+
+    def test_er_diagram_scoped_to_custom_dataset(self):
+        meta = get_database_schema_metadata(target_dataset="company_employees")
+        mermaid = meta["er_mermaid"]
+        assert "erDiagram" in mermaid
+        assert "company_employees {" in mermaid
+        assert "salary" in mermaid
+        assert "students {" not in mermaid
+
+    def test_schema_metadata_scoped_to_custom_dataset(self):
+        meta = get_database_schema_metadata(target_dataset="company_employees")
+        tables = meta["tables"]
+        assert "company_employees" in tables
+        assert "students" not in tables
+        emp_cols = [c["name"] for c in tables["company_employees"]["columns"]]
+        assert "salary" in emp_cols
+        assert "department" in emp_cols
+
+    def test_switch_dataset_endpoint(self, client):
+        res = client.get("/switch-dataset/company_employees", follow_redirects=True)
+        assert res.status_code == 200
+        with client.session_transaction() as sess:
+            assert sess.get("active_dataset_table") == "company_employees"
+
+    def test_api_set_active_dataset_endpoint(self, client):
+        res = client.post("/api/set-active-dataset", json={"dataset": "academic"})
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["status"] == "success"
+        assert data["active_dataset_table"] == "academic"
+
+    def test_explorer_with_custom_dataset_param(self, client):
+        res = client.get("/explorer?dataset=company_employees")
+        assert res.status_code == 200
+        assert b"company_employees" in res.data
+        assert b"Company Employees &amp; Salaries" in res.data or b"Company Employees & Salaries" in res.data
+
+    def test_api_schema_with_dataset_param(self, client):
+        res = client.get("/api/schema?dataset=company_employees")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert "company_employees" in data["tables"]
+        assert "students" not in data["tables"]
+        assert "company_employees {" in data["er_mermaid"]
+
+

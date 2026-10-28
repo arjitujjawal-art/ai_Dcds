@@ -16,6 +16,17 @@
       </p>
     </div>
     <div class="ehb-right">
+      <div class="explorer-dataset-control">
+        <label for="playgroundDatasetSelector" class="eds-label">Scope:</label>
+        <select id="playgroundDatasetSelector" class="explorer-select" onchange="switchPlaygroundDataset(this.value)">
+          <option value="academic" {% if active_dataset_table == 'academic' %}selected{% endif %}>🎓 Academic Relational DB</option>
+          {% for ds in all_datasets %}
+          <option value="{{ ds.table_name }}" {% if active_dataset_table == ds.table_name %}selected{% endif %}>📊 {{ ds.display_name }} ({{ ds.row_count }} rows)</option>
+          {% endfor %}
+          <option value="all" {% if active_dataset_table == 'all' %}selected{% endif %}>🌐 All Connected Tables</option>
+        </select>
+      </div>
+
       <div class="schema-stats-badge">
         <span class="badge-readonly">Read-Only SELECT Enforced</span>
         <span class="sep">&bull;</span>
@@ -24,10 +35,34 @@
     </div>
   </div>
 
-  <!-- Quick Academic Query Templates Bar -->
+  <!-- Quick Query Templates Bar -->
   <div class="preset-templates-bar mt-4">
-    <span class="preset-label">Academic Query Presets:</span>
+    <span class="preset-label">Query Presets ({{ active_dataset_name }}):</span>
     <div class="preset-chips">
+      {% if active_dataset_table == 'company_employees' %}
+      <button type="button" class="preset-chip" onclick="loadPreset('emp_salary_desc')">
+        Top Salaries
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('emp_dept_avg')">
+        Avg Salary by Dept
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('emp_top_rating')">
+        Rating &gt; 4.5
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('emp_city_counts')">
+        Headcount by City
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('emp_all')">
+        All Employees
+      </button>
+      {% elif active_dataset_table != 'academic' and active_dataset_table != 'all' %}
+      <button type="button" class="preset-chip" onclick="loadPreset('custom_all')">
+        All Records ({{ active_dataset_table }})
+      </button>
+      <button type="button" class="preset-chip" onclick="loadPreset('custom_count')">
+        Count Records
+      </button>
+      {% else %}
       <button type="button" class="preset-chip" onclick="loadPreset('students_attendance')">
         Students &amp; Attendance Join
       </button>
@@ -43,6 +78,7 @@
       <button type="button" class="preset-chip" onclick="loadPreset('min_max_subject')">
         Min &amp; Max Marks per Subject
       </button>
+      {% endif %}
     </div>
   </div>
 
@@ -215,8 +251,38 @@ ORDER BY division ASC;`,
     min_max_subject: `SELECT sub.subject_name, MIN(m.marks) AS min_score, MAX(m.marks) AS max_score
 FROM subjects sub
 JOIN marks m ON sub.subject_id = m.subject_id
-GROUP BY sub.subject_name;`
+GROUP BY sub.subject_name;`,
+
+    emp_salary_desc: `SELECT emp_id, name, department, salary, rating, city
+FROM company_employees
+ORDER BY salary DESC
+LIMIT 10;`,
+
+    emp_dept_avg: `SELECT department, COUNT(*) AS head_count, ROUND(AVG(salary), 2) AS avg_salary, ROUND(AVG(rating), 2) AS avg_rating
+FROM company_employees
+GROUP BY department
+ORDER BY avg_salary DESC;`,
+
+    emp_top_rating: `SELECT emp_id, name, department, rating, experience_years
+FROM company_employees
+WHERE rating >= 4.5
+ORDER BY rating DESC;`,
+
+    emp_city_counts: `SELECT city, COUNT(*) AS employee_count, ROUND(AVG(salary), 2) AS avg_salary
+FROM company_employees
+GROUP BY city
+ORDER BY employee_count DESC;`,
+
+    emp_all: `SELECT * FROM company_employees;`,
+
+    custom_all: `SELECT * FROM "{{ active_dataset_table }}" LIMIT 25;`,
+
+    custom_count: `SELECT COUNT(*) AS total_rows FROM "{{ active_dataset_table }}";`
   };
+
+  function switchPlaygroundDataset(newDataset) {
+    window.location.href = `/playground?dataset=${encodeURIComponent(newDataset)}`;
+  }
 
   function loadPreset(key) {
     const editor = document.getElementById('playgroundSqlEditor');

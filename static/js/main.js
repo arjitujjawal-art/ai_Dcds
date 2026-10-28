@@ -183,3 +183,25 @@ function stopVoiceDictation(micBtnId = 'micBtn', statusBarId = 'voiceStatus') {
   if (micBtn) micBtn.classList.remove('listening');
   if (statusBar) statusBar.style.display = 'none';
 }
+
+// ── Interactive Topbar Dataset Switcher Toggle ───────────────────────────────
+function toggleDatasetMenu(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const menu = document.getElementById('topbarDatasetMenu');
+  if (menu) {
+    menu.classList.toggle('hidden');
+  }
+}
+
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('topbarDatasetMenu');
+  const dropdown = document.getElementById('topbarDatasetDropdown');
+  if (menu && !menu.classList.contains('hidden')) {
+    if (!dropdown || !dropdown.contains(e.target)) {
+      menu.classList.add('hidden');
+    }
+  }
+});

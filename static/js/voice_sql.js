@@ -15,6 +15,10 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 document.addEventListener('DOMContentLoaded', () => {
   initSpeechRecognition();
+  const dsSelect = document.getElementById('datasetSelect');
+  if (dsSelect) {
+    updateSuggestionsForDataset(dsSelect.value);
+  }
 });
 
 function initSpeechRecognition() {
@@ -213,15 +217,94 @@ function onDatasetChange(tableName) {
   const label = document.getElementById('activeDbProfileLabel');
   if (label) {
     if (tableName === 'academic') {
-      label.textContent = 'AcademicDB Profile (Relational)';
+      label.textContent = 'Academic Relational DB';
     } else {
       label.textContent = `Custom Dataset: ${tableName}`;
     }
   }
+
+  // Persist the user's dataset selection to server session so other pages update!
+  fetch('/api/set-active-dataset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset: tableName })
+  }).then(r => r.json()).then(data => {
+    // Update topbar pill if present
+    const topbarLabel = document.getElementById('topbarDatasetLabel') || document.querySelector('.dataset-switcher-btn .dsp-name');
+    if (topbarLabel && data.active_dataset_name) {
+      topbarLabel.textContent = data.active_dataset_name;
+    }
+  }).catch(e => console.warn('Could not persist active dataset:', e));
+
+  // Update suggestions dynamically based on selected dataset
+  updateSuggestionsForDataset(tableName);
+
   // If question is already present, regenerate SQL for the newly selected dataset
   const q = document.getElementById('questionInput')?.value.trim();
   if (q) {
     triggerGenerateSql();
+  }
+}
+
+function updateSuggestionsForDataset(tableName) {
+  const container = document.querySelector('.quick-chips-strip .chips-list');
+  if (!container) return;
+
+  if (tableName === 'company_employees') {
+    container.innerHTML = `
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show employees with highest salary')">
+        Highest Salaries
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Average salary by department')">
+        Avg Salary by Dept
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('List employees in Engineering department')">
+        Engineering Team
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Count employees in each city')">
+        Employees by City
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show employees with rating above 4.5')">
+        Top Rated (Rating &gt; 4.5)
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show all employees')">
+        All Employees
+      </button>
+    `;
+  } else if (tableName === 'academic') {
+    container.innerHTML = `
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show students whose attendance is below 75 percent')">
+        Below 75% Attendance
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show the average marks for each subject')">
+        Average Marks per Subject
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('List the top five students by marks')">
+        Top 5 Students
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Count students in each department')">
+        Students by Department
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show students and their subject marks')">
+        Students &amp; Marks Join
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show all students')">
+        All Students
+      </button>
+    `;
+  } else {
+    // Generic dynamic suggestions for custom uploaded datasets
+    container.innerHTML = `
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show all records from ${tableName}')">
+        Show All Records
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Count total records in ${tableName}')">
+        Count Total Rows
+      </button>
+      <button type="button" class="quick-chip" onclick="applySuggestion('Show top 10 rows from ${tableName}')">
+        Top 10 Rows
+      </button>
+    `;
   }
 }
 

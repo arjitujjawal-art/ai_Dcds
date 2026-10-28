@@ -15,7 +15,7 @@
       <div class="db-profile-badge">
         <span class="db-dot-live"></span>
         <span class="db-profile-title">QueryMind Database:</span>
-        <span class="db-profile-name" id="activeDbProfileLabel">AcademicDB Profile (Relational)</span>
+        <span class="db-profile-name" id="activeDbProfileLabel">{{ active_dataset_name }}</span>
       </div>
       <div class="db-engine-badge">SQLite WAL &bull; AST Governed</div>
     </div>
@@ -23,9 +23,9 @@
     <div class="whb-right">
       <label for="datasetSelect" class="dataset-select-label">Target Dataset:</label>
       <select id="datasetSelect" class="form-select-compact" onchange="onDatasetChange(this.value)">
-        <option value="academic" selected>Academic Relational DB (Students, Subjects, Marks, Attendance)</option>
+        <option value="academic" {% if active_dataset_table == 'academic' %}selected{% endif %}>Academic Relational DB (Students, Subjects, Marks, Attendance)</option>
         {% for ds in all_datasets %}
-        <option value="{{ ds.table_name }}">{{ ds.display_name }} ({{ ds.row_count }} rows)</option>
+        <option value="{{ ds.table_name }}" {% if active_dataset_table == ds.table_name %}selected{% endif %}>{{ ds.display_name }} ({{ ds.row_count }} rows)</option>
         {% endfor %}
       </select>
     </div>

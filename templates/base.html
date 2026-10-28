@@ -223,18 +223,70 @@
           <span class="cpt-shortcut"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
         </button>
 
-        <!-- Active Dataset Pill -->
-        {% if active_dataset_name %}
-        <div class="dataset-pill" title="Currently active dataset table">
-          <span class="dsp-dot"></span>
-          <span class="dsp-name">{{ active_dataset_name }}</span>
+        <!-- Interactive Global Dataset Switcher Dropdown -->
+        <div class="dataset-switcher-wrapper" id="topbarDatasetDropdown">
+          <button type="button" class="dataset-switcher-btn" onclick="toggleDatasetMenu(event)" title="Active dataset scope &bull; Click to switch">
+            <span class="dsp-dot"></span>
+            <span class="dsp-name">{{ active_dataset_name }}</span>
+            <svg class="dsp-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <div class="dataset-switcher-menu hidden" id="topbarDatasetMenu">
+            <div class="dsm-header">Active Dataset Scope</div>
+            
+            <a href="{{ url_for('switch_dataset', target_dataset='academic') }}" 
+               class="dsm-item {% if active_dataset_table == 'academic' %}active{% endif %}">
+              <span class="dsm-icon">🎓</span>
+              <div class="dsm-info">
+                <span class="dsm-title">Academic Relational DB</span>
+                <span class="dsm-sub">4 Tables (Students, Marks, etc.)</span>
+              </div>
+              {% if active_dataset_table == 'academic' %}
+              <span class="dsm-check">✓</span>
+              {% endif %}
+            </a>
+
+            {% for ds in global_datasets %}
+            <a href="{{ url_for('switch_dataset', target_dataset=ds.table_name) }}" 
+               class="dsm-item {% if active_dataset_table == ds.table_name %}active{% endif %}">
+              <span class="dsm-icon">📊</span>
+              <div class="dsm-info">
+                <span class="dsm-title">{{ ds.display_name }}</span>
+                <span class="dsm-sub">{{ ds.row_count }} rows &bull; {{ ds.col_count }} cols</span>
+              </div>
+              {% if active_dataset_table == ds.table_name %}
+              <span class="dsm-check">✓</span>
+              {% endif %}
+            </a>
+            {% endfor %}
+
+            <div class="dsm-divider"></div>
+
+            <a href="{{ url_for('switch_dataset', target_dataset='all') }}" 
+               class="dsm-item {% if active_dataset_table == 'all' %}active{% endif %}">
+              <span class="dsm-icon">🌐</span>
+              <div class="dsm-info">
+                <span class="dsm-title">All Connected Tables</span>
+                <span class="dsm-sub">Unified SQLite Schema Catalog</span>
+              </div>
+              {% if active_dataset_table == 'all' %}
+              <span class="dsm-check">✓</span>
+              {% endif %}
+            </a>
+
+            <div class="dsm-divider"></div>
+
+            <a href="{{ url_for('portal1') }}" class="dsm-item dsm-action">
+              <span class="dsm-icon">➕</span>
+              <div class="dsm-info">
+                <span class="dsm-title">Upload New Dataset</span>
+                <span class="dsm-sub">Import CSV or Excel spreadsheet</span>
+              </div>
+            </a>
+          </div>
         </div>
-        {% elif global_datasets and global_datasets|length > 0 %}
-        <div class="dataset-pill" title="Loaded datasets">
-          <span class="dsp-dot"></span>
-          <span class="dsp-name">{{ global_datasets[0].display_name }}</span>
-        </div>
-        {% endif %}
 
         <!-- Role Badge -->
         <span class="topbar-role-badge badge-{{ current_role }}">

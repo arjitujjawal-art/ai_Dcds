@@ -367,13 +367,33 @@ def get_feedback(limit=100):
     return [dict(r) for r in rows]
 
 
-def generate_er_diagram_mermaid(schema_dict: dict, relationships: list) -> str:
-    """Generate Mermaid ER syntax from real introspected SQLite metadata."""
+def generate_er_diagram_mermaid(schema_dict: dict, relationships: list, target_dataset: str = None) -> str:
+    """
+    Generate Mermaid ER syntax from real introspected SQLite metadata.
+    Dynamically scopes to target_dataset ('academic', custom table name, or 'all').
+    """
     lines = ["erDiagram"]
-    er_tables = ["students", "subjects", "marks", "attendance"]
-    for t in schema_dict:
-        if t not in er_tables and schema_dict[t]["category"] != "system":
-            er_tables.append(t)
+    academic_tables = ["students", "subjects", "marks", "attendance"]
+
+    if target_dataset == "academic" or (not target_dataset and "students" in schema_dict):
+        er_tables = [t for t in academic_tables if t in schema_dict]
+    elif target_dataset and target_dataset != "all":
+        # Specific custom dataset table requested
+        if target_dataset in schema_dict:
+            er_tables = [target_dataset]
+            # Include related tables if relationships exist
+            for rel in relationships:
+                if rel["from_table"] == target_dataset and rel["to_table"] in schema_dict:
+                    if rel["to_table"] not in er_tables:
+                        er_tables.append(rel["to_table"])
+                elif rel["to_table"] == target_dataset and rel["from_table"] in schema_dict:
+                    if rel["from_table"] not in er_tables:
+                        er_tables.append(rel["from_table"])
+        else:
+            er_tables = [t for t in academic_tables if t in schema_dict]
+    else:
+        # All connected non-system tables
+        er_tables = [t for t in schema_dict if schema_dict[t].get("category") != "system"]
 
     for tbl_name in er_tables:
         if tbl_name not in schema_dict:
@@ -404,10 +424,11 @@ def generate_er_diagram_mermaid(schema_dict: dict, relationships: list) -> str:
     return "\n".join(lines)
 
 
-def get_database_schema_metadata() -> dict:
+def get_database_schema_metadata(target_dataset: str = None) -> dict:
     """
     Introspect live SQLite metadata for all tables, columns, constraints,
     primary keys, foreign keys, row counts, and sample records.
+    Optionally scoped to target_dataset ('academic', custom table name, or 'all').
     """
     conn = _conn()
     tables = [
@@ -478,12 +499,29 @@ def get_database_schema_metadata() -> dict:
 
     conn.close()
 
-    mermaid = generate_er_diagram_mermaid(schema_dict, er_relationships)
+    # Determine scoped tables
+    if target_dataset == "academic" or (not target_dataset and "students" in schema_dict):
+        filtered_tables = {tbl: schema_dict[tbl] for tbl in ["students", "subjects", "marks", "attendance"] if tbl in schema_dict}
+        scoped_relationships = [r for r in er_relationships if r["from_table"] in filtered_tables and r["to_table"] in filtered_tables]
+    elif target_dataset == "all":
+        filtered_tables = {tbl: d for tbl, d in schema_dict.items() if d["category"] != "system"}
+        scoped_relationships = [r for r in er_relationships if r["from_table"] in filtered_tables and r["to_table"] in filtered_tables]
+    elif target_dataset and target_dataset in schema_dict:
+        filtered_tables = {target_dataset: schema_dict[target_dataset]}
+        scoped_relationships = [r for r in er_relationships if r["from_table"] == target_dataset or r["to_table"] == target_dataset]
+    else:
+        filtered_tables = {tbl: schema_dict[tbl] for tbl in ["students", "subjects", "marks", "attendance"] if tbl in schema_dict}
+        scoped_relationships = [r for r in er_relationships if r["from_table"] in filtered_tables and r["to_table"] in filtered_tables]
+
+    mermaid = generate_er_diagram_mermaid(schema_dict, er_relationships, target_dataset=target_dataset)
 
     return {
-        "tables": schema_dict,
-        "relationships": er_relationships,
+        "tables": filtered_tables,
+        "all_tables": schema_dict,
+        "relationships": scoped_relationships,
+        "all_relationships": er_relationships,
         "er_mermaid": mermaid,
+        "target_dataset": target_dataset or "academic",
     }
 
 
