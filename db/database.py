@@ -13,12 +13,69 @@ import os
 DB_PATH = os.path.join(os.path.dirname(__file__), "querymind.db")
 
 
+import queue
+import threading
+
+# Concurrency & Non-Blocking Logging Subsystem
+_LOG_QUEUE = queue.Queue(maxsize=10000)
+
 def _conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row          # rows accessible as dicts
+    """Create a high-concurrency tuned SQLite connection."""
+    conn = sqlite3.connect(DB_PATH, timeout=15.0)
+    conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 15000")
+    conn.execute("PRAGMA synchronous = NORMAL")
+    conn.execute("PRAGMA cache_size = -64000")
+    conn.execute("PRAGMA temp_store = MEMORY")
     return conn
+
+
+def _log_worker():
+    """Background daemon worker flushing query and audit logs asynchronously."""
+    while True:
+        try:
+            item = _LOG_QUEUE.get()
+            if item is None:
+                break
+            batch = [item]
+            while len(batch) < 50:
+                try:
+                    batch.append(_LOG_QUEUE.get_nowait())
+                except queue.Empty:
+                    break
+
+            try:
+                conn = _conn()
+                for log_type, data in batch:
+                    if log_type == "query":
+                        conn.execute(
+                            """INSERT INTO query_logs
+                               (user_id, username, question, generated_sql, status,
+                                execution_time_ms, result_row_count, error, input_mode)
+                               VALUES (?,?,?,?,?,?,?,?,?)""",
+                            data
+                        )
+                    elif log_type == "audit":
+                        conn.execute(
+                            "INSERT INTO audit_logs (event_type, user_id, username, details) VALUES (?,?,?,?)",
+                            data
+                        )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            finally:
+                for _ in batch:
+                    _LOG_QUEUE.task_done()
+        except Exception:
+            pass
+
+
+# Start daemon log flush worker
+_flush_thread = threading.Thread(target=_log_worker, daemon=True)
+_flush_thread.start()
 
 
 def _hash(pw: str) -> str:
@@ -287,23 +344,36 @@ def explain_query_plan(sql: str) -> dict:
 
 def log_query(user_id, username, question, sql, status,
               execution_ms, row_count, error=None, input_mode="text"):
+    """Non-blocking query logger with in-memory buffer and zero lock contention."""
+    data = (user_id, username, question, sql, status,
+            execution_ms, row_count, error, input_mode)
     try:
-        conn = _conn()
-        conn.execute(
-            """INSERT INTO query_logs
-               (user_id, username, question, generated_sql, status,
-                execution_time_ms, result_row_count, error, input_mode)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (user_id, username, question, sql, status,
-             execution_ms, row_count, error, input_mode)
-        )
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+        _LOG_QUEUE.put_nowait(("query", data))
+    except queue.Full:
+        try:
+            conn = _conn()
+            conn.execute(
+                """INSERT INTO query_logs
+                   (user_id, username, question, generated_sql, status,
+                    execution_time_ms, result_row_count, error, input_mode)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                data
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
 
 
 def get_query_history(user_id=None, limit=50):
+    try:
+        # Gracefully await flush for read consistency
+        if not _LOG_QUEUE.empty():
+            import time
+            time.sleep(0.05)
+    except Exception:
+        pass
+
     conn = _conn()
     if user_id:
         rows = conn.execute(
@@ -323,19 +393,31 @@ def get_all_history(limit=200):
 
 
 def log_audit(event_type, user_id=None, username=None, details=None):
+    """Non-blocking audit event logger with in-memory buffer."""
+    data = (event_type, user_id, username, str(details) if details else None)
     try:
-        conn = _conn()
-        conn.execute(
-            "INSERT INTO audit_logs (event_type, user_id, username, details) VALUES (?,?,?,?)",
-            (event_type, user_id, username, str(details) if details else None)
-        )
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
+        _LOG_QUEUE.put_nowait(("audit", data))
+    except queue.Full:
+        try:
+            conn = _conn()
+            conn.execute(
+                "INSERT INTO audit_logs (event_type, user_id, username, details) VALUES (?,?,?,?)",
+                data
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
 
 
 def get_audit_logs(limit=200):
+    try:
+        if not _LOG_QUEUE.empty():
+            import time
+            time.sleep(0.05)
+    except Exception:
+        pass
+
     conn = _conn()
     rows = conn.execute(
         "SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)

@@ -578,6 +578,19 @@ function renderResults(columns, rows, error) {
   if (placeholder) placeholder.classList.add('hidden');
   table.classList.remove('hidden');
 
+  // Compute and display Automated Executive Takeaways Narrative
+  const takeawayBanner = document.getElementById('executiveTakeawayBanner');
+  const takeawayText = document.getElementById('executiveTakeawayText');
+  if (takeawayBanner && takeawayText) {
+    const takeaway = generateExecutiveTakeaway(columns, rows);
+    if (takeaway) {
+      takeawayText.textContent = takeaway;
+      takeawayBanner.classList.remove('hidden');
+    } else {
+      takeawayBanner.classList.add('hidden');
+    }
+  }
+
   // Render Table Head
   let thHtml = '<tr><th style="width: 48px;">#</th>';
   for (const col of columns) {
@@ -598,6 +611,35 @@ function renderResults(columns, rows, error) {
     tbHtml += '</tr>';
   });
   tbody.innerHTML = tbHtml;
+}
+
+function generateExecutiveTakeaway(columns, rows) {
+  if (!rows || rows.length === 0) return '';
+  const count = rows.length;
+
+  const numCols = columns.filter(c => rows.some(r => typeof r[c] === 'number'));
+  if (numCols.length === 0) {
+    return `Retrieved ${count} record(s) matching your criteria.`;
+  }
+
+  const primeCol = numCols[0];
+  const nums = rows.map(r => Number(r[primeCol])).filter(n => !isNaN(n));
+  if (nums.length === 0) return `Retrieved ${count} record(s).`;
+
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  const avg = (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
+
+  const entityCol = columns.find(c => ['name', 'student_name', 'subject_name', 'department', 'city', 'division'].includes(c.toLowerCase()));
+  let peakStr = '';
+  if (entityCol) {
+    const peakRow = rows.find(r => Number(r[primeCol]) === max);
+    if (peakRow && peakRow[entityCol]) {
+      peakStr = ` Peak value belongs to "${peakRow[entityCol]}" (${max}).`;
+    }
+  }
+
+  return `Analyzed ${count} record(s). ${primeCol.replace(/_/g, ' ').toUpperCase()} averages ${avg} (spanning ${min} to ${max}).${peakStr}`;
 }
 
 function renderChart(chartConfig) {

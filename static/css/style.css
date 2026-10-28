@@ -714,6 +714,40 @@ input, textarea, select {
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
 }
 
+/* Automated Executive Takeaways Banner */
+.executive-takeaway-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(16, 185, 129, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.etb-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.etb-content {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e2e8f0;
+}
+
+.etb-label {
+  font-weight: 700;
+  color: #60a5fa;
+  margin-right: 6px;
+}
+
+.etb-text {
+  color: #f1f5f9;
+}
+
 .topbar-role-badge {
   font-size: 11px;
   font-weight: 600;

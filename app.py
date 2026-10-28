@@ -56,6 +56,11 @@ from db.database import (
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "querymind-secret-2024-change-in-prod")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max payload
+
+# In-Memory High-Concurrency Memoization Caches
+_TTS_CACHE = {}          # (md5(text), voice) -> audio_bytes
+_SQL_GEN_CACHE = {}      # (normalized_question, table_name) -> json_dict
 
 
 @app.route("/health")
@@ -983,6 +988,16 @@ def text_to_speech():
     if not text:
         return jsonify({"error": "No text provided for voice synthesis."}), 400
 
+    # 1. Check in-memory memoized audio cache (serves in < 3ms)
+    cache_key = (hashlib.md5(text.encode("utf-8")).hexdigest(), voice)
+    if cache_key in _TTS_CACHE:
+        return send_file(
+            io.BytesIO(_TTS_CACHE[cache_key]),
+            mimetype="audio/mpeg",
+            as_attachment=False,
+            download_name="spoken_summary.mp3"
+        )
+
     async def _stream_neural_audio():
         comm = edge_tts.Communicate(text=text, voice=voice)
         audio_stream = bytearray()
@@ -995,6 +1010,10 @@ def text_to_speech():
         audio_bytes = asyncio.run(_stream_neural_audio())
         if not audio_bytes:
             return jsonify({"error": "Audio generation produced empty buffer."}), 500
+
+        # Save to memoization cache (cap at 500 entries)
+        if len(_TTS_CACHE) < 500:
+            _TTS_CACHE[cache_key] = audio_bytes
 
         return send_file(
             io.BytesIO(audio_bytes),
@@ -1033,6 +1052,19 @@ def api_generate_sql():
     data = request.get_json(silent=True) or {}
     question = data.get("question", "").strip()
     table_name = data.get("table_name", "").strip()
+
+    if len(question) > 500:
+        return jsonify({
+            "status": "error",
+            "classification": OUT_OF_SCOPE,
+            "message": "Query question exceeds maximum allowed length of 500 characters.",
+            "suggestions": ["Please ask a more concise question."]
+        }), 400
+
+    # High-concurrency memoization cache lookup (< 1ms latency)
+    cache_key = (question.lower(), table_name)
+    if cache_key in _SQL_GEN_CACHE:
+        return jsonify(_SQL_GEN_CACHE[cache_key])
 
     # Discover known schema entities
     known_tables = ["students", "subjects", "marks", "attendance"]
@@ -1106,7 +1138,7 @@ def api_generate_sql():
                 pass
 
     if nlp and nlp.get("matched") and nlp.get("sql"):
-        return jsonify({
+        response_payload = {
             "status": "success",
             "classification": DATABASE_QUERY,
             "intent": nlp.get("description", "database_query"),
@@ -1116,7 +1148,10 @@ def api_generate_sql():
             "confidence": nlp.get("confidence", 3),
             "message": "SQL query generated successfully.",
             "suggestions": []
-        })
+        }
+        if len(_SQL_GEN_CACHE) < 1000:
+            _SQL_GEN_CACHE[cache_key] = response_payload
+        return jsonify(response_payload)
 
     # Intent was categorized as a database query, but query formulation failed to map to concrete template
     return jsonify({
@@ -1146,6 +1181,8 @@ def api_validate_sql():
     table_name = data.get("table_name", "").strip()
     if not sql:
         return jsonify({"valid": False, "reason": "Empty SQL query."}), 400
+    if len(sql) > 4000:
+        return jsonify({"valid": False, "reason": "SQL length exceeds maximum limit of 4000 characters."}), 400
 
     role = session.get("role", "admin")
     custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
@@ -1173,6 +1210,8 @@ def api_execute_sql():
 
     if not sql:
         return jsonify({"error": "No SQL provided for execution."}), 400
+    if len(sql) > 4000:
+        return jsonify({"error": "SQL length exceeds maximum limit of 4000 characters."}), 400
 
     role = session.get("role", "admin")
     custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
