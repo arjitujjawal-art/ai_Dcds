@@ -17,7 +17,15 @@ import asyncio
 import edge_tts
 
 # ── Local imports ─────────────────────────────────────────────────────────────
-from nlp.sql_generator import generate_sql, generate_sql_for_dataset
+from nlp.sql_generator import generate_sql, generate_sql_for_dataset, _tokens
+from nlp.intent_classifier import (
+    classify_intent,
+    DATABASE_QUERY,
+    AMBIGUOUS_QUERY,
+    OUT_OF_SCOPE,
+    UNSUPPORTED_OPERATION,
+    EMPTY_INPUT,
+)
 from nlp.sql_validator  import validate_sql
 from nlp.speech_narrator import DataToSpeechNarrator
 from db.analyzer import auto_analyze_dataset
@@ -40,7 +48,8 @@ from db.database import (
     get_uploaded_datasets,
     get_dataset_schema,
     delete_dataset,
-    execute_query,
+    get_database_schema_metadata,
+    explain_query_plan,
 )
 
 # ─── App ──────────────────────────────────────────────────────────────────────
@@ -175,9 +184,57 @@ def dashboard():
     )
 
 
-# ── PORTAL 1: Dataset Upload & Automated Analysis ─────────────────────────────
+# ── QUERYMIND 2.0 PRIMARY APPLICATION AREAS ───────────────────────────────────
 
 @app.route("/")
+def home():
+    stats = get_system_stats()
+    recent = get_all_history(6)
+    return render_template("home.html", stats=stats, recent=recent)
+
+
+@app.route("/workspace")
+@app.route("/voice-sql")
+def voice_sql_workspace():
+    all_ds = get_uploaded_datasets()
+    prefill = request.args.get("q", "").strip()
+    return render_template(
+        "voice_sql_workspace.html",
+        all_datasets=all_ds,
+        prefill_question=prefill,
+    )
+
+
+@app.route("/explorer")
+def database_explorer():
+    meta = get_database_schema_metadata()
+    return render_template("explorer.html", schema_meta=meta)
+
+
+@app.route("/playground")
+def sql_playground():
+    meta = get_database_schema_metadata()
+    return render_template("playground.html", schema_meta=meta)
+
+
+@app.route("/admin")
+@login_required
+def admin_dashboard():
+    stats = get_system_stats()
+    uploaded_datasets = get_uploaded_datasets()
+    app_users = get_app_users()
+    audit_logs = get_audit_logs(100)
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        uploaded_datasets=uploaded_datasets,
+        app_users=app_users,
+        audit_logs=audit_logs,
+    )
+
+
+# ── PORTAL 1: Dataset Upload & Automated Analysis ─────────────────────────────
+
 @app.route("/portal1")
 def portal1():
     all_ds = get_uploaded_datasets()
@@ -394,33 +451,34 @@ def query():
             "confidence": 1.0
         }
     else:
+        # Intent classification check
+        intent_res = classify_intent(question)
+        if intent_res["classification"] != DATABASE_QUERY:
+            return render_template("result.html",
+                question=question, error=intent_res["message"],
+                sql=None, columns=[], rows=[], chart_json=None,
+                verbal_summary=intent_res["message"])
+
         nlp = generate_sql(question)
     
-    # If standard academic patterns did not match, check uploaded datasets
+    # If standard academic patterns did not match, check uploaded datasets (only if not an academic entity query)
     if not nlp["matched"]:
-        all_ds = get_uploaded_datasets()
-        for ds in all_ds:
-            name_words = [w.lower() for w in re.findall(r"\w+", ds["display_name"])]
-            tbl_words  = [w.lower() for w in re.findall(r"\w+", ds["table_name"])]
-            q_lower    = question.lower()
-            if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
-                schema = get_dataset_schema(ds["table_name"])
-                if schema:
-                    cols = schema.get("all_columns", [])
-                    candidate = generate_sql_for_dataset(question, ds["table_name"], cols)
-                    if candidate.get("matched"):
-                        nlp = candidate
-                        nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
-                        break
-        # If still not matched and there's only 1 uploaded dataset, try matching it
-        if not nlp["matched"] and len(all_ds) == 1:
-            schema = get_dataset_schema(all_ds[0]["table_name"])
-            if schema:
-                cols = schema.get("all_columns", [])
-                candidate = generate_sql_for_dataset(question, all_ds[0]["table_name"], cols)
-                if candidate.get("matched"):
-                    nlp = candidate
-                    nlp["description"] = f"{nlp['description']} [{all_ds[0]['display_name']}]"
+        q_toks = _tokens(question)
+        if not any(k in q_toks for k in ("student", "attendance", "subject", "division", "department")):
+            all_ds = get_uploaded_datasets()
+            for ds in all_ds:
+                name_words = [w.lower() for w in re.findall(r"\w+", ds["display_name"])]
+                tbl_words  = [w.lower() for w in re.findall(r"\w+", ds["table_name"])]
+                q_lower    = question.lower()
+                if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
+                    schema = get_dataset_schema(ds["table_name"])
+                    if schema:
+                        cols = schema.get("all_columns", [])
+                        candidate = generate_sql_for_dataset(question, ds["table_name"], cols)
+                        if candidate.get("matched"):
+                            nlp = candidate
+                            nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                            break
 
     sql = nlp["sql"]
 
@@ -824,6 +882,233 @@ def transcribe_audio():
         "engine": "WebSpeechAPI + faster-whisper reference bridge",
         "message": "Direct client-side streaming ASR active for sub-200ms latency."
     })
+
+
+# ── QueryMind 2.0 Async REST APIs ─────────────────────────────────────────────
+
+@app.route("/api/generate-sql", methods=["POST"])
+def api_generate_sql():
+    """
+    Schema-aware natural language to SQL translation endpoint with explicit
+    intent classification (DATABASE_QUERY, AMBIGUOUS_QUERY, OUT_OF_SCOPE,
+    UNSUPPORTED_OPERATION, EMPTY_INPUT).
+    """
+    data = request.get_json(silent=True) or {}
+    question = data.get("question", "").strip()
+    table_name = data.get("table_name", "").strip()
+
+    # Discover known schema entities
+    known_tables = ["students", "subjects", "marks", "attendance"]
+    known_columns = [
+        "student_id", "name", "division", "email",
+        "subject_id", "subject_name", "credits", "department",
+        "mark_id", "marks",
+        "attendance_id", "attendance_percentage", "attended", "total_classes"
+    ]
+    all_ds = []
+    try:
+        all_ds = get_uploaded_datasets()
+        for ds in all_ds:
+            known_tables.append(ds["table_name"])
+            schema = get_dataset_schema(ds["table_name"])
+            if schema and "all_columns" in schema:
+                known_columns.extend(schema["all_columns"])
+    except Exception:
+        pass
+
+    # 1. Intent Classification Stage
+    intent_res = classify_intent(question, known_tables=known_tables, known_columns=known_columns)
+
+    if intent_res["classification"] != DATABASE_QUERY:
+        return jsonify({
+            "status": intent_res["status"],
+            "classification": intent_res["classification"],
+            "intent": None,
+            "sql": None,
+            "matched": False,
+            "message": intent_res["message"],
+            "suggestions": intent_res["suggestions"],
+            "description": intent_res["message"]
+        })
+
+    # 2. Schema-Aware Relational SQL Generation
+    nlp = None
+
+    # Custom dataset table specified
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        schema = get_dataset_schema(table_name)
+        if schema:
+            cols = schema.get("all_columns", [])
+            candidate = generate_sql_for_dataset(question, table_name, cols)
+            if candidate.get("matched") and candidate.get("sql"):
+                nlp = candidate
+                nlp["table_name"] = table_name
+
+    # Standard academic relational schema routing
+    if not nlp or not nlp.get("matched"):
+        nlp = generate_sql(question)
+
+    # Check custom datasets ONLY if academic did not match and question is not an academic entity query
+    if not nlp or not nlp.get("matched"):
+        q_toks = _tokens(question)
+        if not any(k in q_toks for k in ("student", "attendance", "subject", "division", "department")):
+            try:
+                for ds in all_ds:
+                    name_words = [w.lower() for w in re.findall(r"\w+", ds.get("display_name", ""))]
+                    tbl_words  = [w.lower() for w in re.findall(r"\w+", ds.get("table_name", ""))]
+                    q_lower    = question.lower()
+                    if any(w in q_lower for w in name_words if len(w) > 3) or any(w in q_lower for w in tbl_words if len(w) > 3):
+                        schema = get_dataset_schema(ds["table_name"])
+                        if schema:
+                            candidate = generate_sql_for_dataset(question, ds["table_name"], schema.get("all_columns", []))
+                            if candidate.get("matched") and candidate.get("sql"):
+                                nlp = candidate
+                                nlp["description"] = f"{nlp['description']} [{ds['display_name']}]"
+                                break
+            except Exception:
+                pass
+
+    if nlp and nlp.get("matched") and nlp.get("sql"):
+        return jsonify({
+            "status": "success",
+            "classification": DATABASE_QUERY,
+            "intent": nlp.get("description", "database_query"),
+            "sql": nlp.get("sql"),
+            "description": nlp.get("description"),
+            "matched": True,
+            "confidence": nlp.get("confidence", 3),
+            "message": "SQL query generated successfully.",
+            "suggestions": []
+        })
+
+    # Intent was categorized as a database query, but query formulation failed to map to concrete template
+    return jsonify({
+        "status": "ambiguous",
+        "classification": AMBIGUOUS_QUERY,
+        "intent": None,
+        "sql": None,
+        "matched": False,
+        "message": f"Could not formulate SQL for '{question}'. Please specify table or column names.",
+        "suggestions": [
+            "Show all students",
+            "Find students with attendance below 75%",
+            "Show average marks by subject"
+        ],
+        "description": "Could not map query to schema."
+    })
+
+
+@app.route("/api/validate-sql", methods=["POST"])
+def api_validate_sql():
+    """
+    Deterministic AST governance validation gateway.
+    Verifies read-only SELECT expressions, entity RBAC, and injects row ceilings.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    table_name = data.get("table_name", "").strip()
+    if not sql:
+        return jsonify({"valid": False, "reason": "Empty SQL query."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    return jsonify(v)
+
+
+@app.route("/api/execute-sql", methods=["POST"])
+def api_execute_sql():
+    """
+    Authorized SQL execution engine.
+    Validates AST, executes against SQLite, records query history with input mode,
+    and returns tabular records with execution latency and visualization specs.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    question = data.get("question", "").strip()
+    input_mode = data.get("input_mode", "text").strip().lower()
+    table_name = data.get("table_name", "").strip()
+    if input_mode not in ("voice", "text"):
+        input_mode = "text"
+
+    if not sql:
+        return jsonify({"error": "No SQL provided for execution."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    if not v["valid"]:
+        log_query(session.get("user_id", 1), session.get("username", "user"),
+                  question or sql, sql, "validation_failed", 0, 0,
+                  error=v["reason"], input_mode=input_mode)
+        log_audit("validation_blocked", session.get("user_id", 1), session.get("username", "user"),
+                  details=json.dumps({"sql": sql, "violation": v["reason"], "input_mode": input_mode}))
+        return jsonify({"error": f"AST Governance Rejection: {v['reason']}", "valid": False}), 403
+
+    sanitized_sql = v.get("sanitized_sql") or sql
+    res = execute_query(sanitized_sql)
+
+    status = "success" if not res.get("error") else "db_error"
+    log_query(session.get("user_id", 1), session.get("username", "user"),
+              question or sanitized_sql, sanitized_sql, status,
+              res["execution_ms"], res["row_count"],
+              error=res.get("error"), input_mode=input_mode)
+
+    chart = make_chart(res["columns"], res["rows"])
+    verbal = DataToSpeechNarrator.construct_verbal_summary(
+        question or "Database query", res["columns"], res["rows"], error=res.get("error")
+    )
+
+    return jsonify({
+        "columns": res["columns"],
+        "rows": res["rows"],
+        "row_count": res["row_count"],
+        "execution_ms": res["execution_ms"],
+        "sanitized_sql": sanitized_sql,
+        "error": res.get("error"),
+        "chart": chart,
+        "verbal_summary": verbal
+    })
+
+
+@app.route("/api/explain-sql", methods=["POST"])
+def api_explain_sql():
+    """
+    Query execution plan analyzer (EXPLAIN QUERY PLAN).
+    Provides deep DBMS inspection into scan types (FULL TABLE SCAN vs INDEX SEARCH),
+    temporary B-Trees, and table access patterns for academic query profiling.
+    """
+    data = request.get_json(silent=True) or {}
+    sql = data.get("sql", "").strip()
+    table_name = data.get("table_name", "").strip()
+    if not sql:
+        return jsonify({"error": "No SQL provided for plan analysis."}), 400
+
+    role = session.get("role", "admin")
+    custom_tables = {ds["table_name"] for ds in get_uploaded_datasets()}
+    if table_name and table_name not in ("academic", "students", "subjects", "marks", "attendance"):
+        custom_tables.add(table_name)
+
+    v = validate_sql(sql, role, custom_allowed_tables=custom_tables)
+    if not v["valid"]:
+        return jsonify({"error": f"Cannot explain invalid query: {v['reason']}", "valid": False}), 400
+
+    sanitized_sql = v.get("sanitized_sql") or sql
+    plan = explain_query_plan(sanitized_sql)
+    return jsonify(plan)
+
+
+@app.route("/api/schema")
+def api_schema():
+    """Return live database metadata and generated Mermaid ER diagram."""
+    meta = get_database_schema_metadata()
+    return jsonify(meta)
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────

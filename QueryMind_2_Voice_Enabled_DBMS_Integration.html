@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QueryMind 2.0: Voice-Enabled DBMS Integration</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 18mm 16mm 20mm 16mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8.5pt;
+        color: #64748B;
+      }
+      @bottom-left {
+        content: "QueryMind 2.0: Voice-Enabled DBMS Integration (Research Report)";
+        font-family: 'Inter', sans-serif;
+        font-size: 8.5pt;
+        color: #64748B;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9.3pt;
+      line-height: 1.55;
+      color: #1E293B;
+      background: #FFFFFF;
+    }
+
+    /* Header Banner */
+    .header-banner {
+      border-bottom: 2.5px solid #0F172A;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .badge-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      font-size: 7.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-primary { background: #EEF2FF; color: #3730A3; border: 1px solid #C7D2FE; }
+    .badge-emerald { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+    .badge-amber { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+    .badge-slate { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+    .badge-purple { background: #FAF5FF; color: #6B21A8; border: 1px solid #E9D5FF; }
+
+    h1.doc-title {
+      font-size: 20pt;
+      font-weight: 800;
+      line-height: 1.22;
+      color: #0F172A;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
+    }
+
+    .doc-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.6pt;
+      color: #64748B;
+      margin-top: 6px;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 8px;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 12.5pt;
+      font-weight: 700;
+      color: #0F172A;
+      letter-spacing: -0.015em;
+      margin-top: 20px;
+      margin-bottom: 9px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid #E2E8F0;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 10.2pt;
+      font-weight: 600;
+      color: #1E293B;
+      margin-top: 12px;
+      margin-bottom: 5px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 8.5px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 10px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Callouts */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #3B82F6;
+      border-radius: 0 6px 6px 0;
+      padding: 11px 13px;
+      margin-bottom: 13px;
+      font-size: 9.1pt;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #1E3A8A;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 7.8pt;
+      letter-spacing: 0.05em;
+    }
+
+    .callout-success {
+      background: #F0FDF4;
+      border-left-color: #10B981;
+    }
+    .callout-success .callout-title { color: #065F46; }
+
+    .callout-warning {
+      background: #FFFBEB;
+      border-left-color: #F59E0B;
+    }
+    .callout-warning .callout-title { color: #92400E; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 11px 0 14px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0F172A;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 6px 9px;
+      font-weight: 600;
+      border: 1px solid #0F172A;
+    }
+
+    td {
+      padding: 5.5px 9px;
+      border: 1px solid #CBD5E1;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) {
+      background: #F8FAFC;
+    }
+
+    /* Code blocks */
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 9px 0 12px 0;
+      line-height: 1.45;
+      page-break-inside: avoid;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.3pt;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 2px 4px;
+      border-radius: 3px;
+      border: 1px solid #E2E8F0;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+
+    /* Architecture Flow Box */
+    .flow-diagram-container {
+      background: #F8FAFC;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .flow-node {
+      flex: 1;
+      background: #FFFFFF;
+      border: 1.5px solid #94A3B8;
+      border-radius: 6px;
+      padding: 7px 9px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .flow-node-title {
+      font-weight: 700;
+      font-size: 8.2pt;
+      color: #0F172A;
+      margin-bottom: 2px;
+    }
+
+    .flow-node-desc {
+      font-size: 7.3pt;
+      color: #64748B;
+      line-height: 1.25;
+    }
+
+    .flow-node.client { border-color: #3B82F6; background: #EFF6FF; }
+    .flow-node.client .flow-node-title { color: #1E40AF; }
+
+    .flow-node.server { border-color: #10B981; background: #F0FDF4; }
+    .flow-node.server .flow-node-title { color: #065F46; }
+
+    .flow-node.db { border-color: #8B5CF6; background: #F5F3FF; }
+    .flow-node.db .flow-node-title { color: #5B21B6; }
+
+    .flow-arrow {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #64748B;
+      flex: 0 0 14px;
+      text-align: center;
+    }
+
+    /* Prompt Box */
+    .prompt-box {
+      background: #0F172A;
+      color: #E2E8F0;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin: 10px 0 14px 0;
+      border-left: 4px solid #6366F1;
+      font-size: 8.6pt;
+      line-height: 1.5;
+      page-break-inside: avoid;
+    }
+
+    .prompt-box h4 {
+      color: #A5B4FC;
+      font-size: 9.5pt;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover / Header Banner -->
+  <div class="header-banner">
+    <div class="badge-strip">
+      <span class="badge badge-primary">Academic Research Report</span>
+      <span class="badge badge-emerald">Supabase PostgreSQL 15+</span>
+      <span class="badge badge-purple">Dual-Engine Architecture</span>
+      <span class="badge badge-amber">Open-Source STT</span>
+      <span class="badge badge-slate">59/59 Automated Tests Verified</span>
+    </div>
+    <h1 class="doc-title">QueryMind 2.0: Voice-Enabled DBMS Integration</h1>
+    <div style="font-size: 10pt; color: #475569; font-weight: 500; margin-bottom: 6px;">
+      Comprehensive Architectural Blueprint, Speech-to-Text Fallbacks, Cloud Relational Migration, Advanced Query Governance, and Autonomous Development Loop
+    </div>
+    <div class="doc-meta-row">
+      <span><strong>Document Reference:</strong> QM2-INT-DEEP-2026</span>
+      <span><strong>Branch Status:</strong> <code>querymind-2.0</code> (59/59 Tests Passing)</span>
+      <span><strong>Primary Target:</strong> Supabase PostgreSQL & Web Speech API / Vosk</span>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="callout">
+    <div class="callout-title">Executive Summary</div>
+    <p>
+      <strong>QueryMind 2.0</strong> upgrades the existing natural-language-to-SQL web application with voice input capabilities and a comprehensive <strong>Supabase (PostgreSQL 15+)</strong> cloud backend. Crucially, the platform elevates Database Management Systems (DBMS) education as its central anchor, introducing query execution plan analysis (<code>EXPLAIN QUERY PLAN</code>), relational schema introspection, dynamic Mermaid Entity-Relationship (ER) generation, and database-level Row-Level Security (RLS).
+    </p>
+    <p>
+      This report builds upon the verified starting point established on the <code>querymind-2.0</code> branch—including the in-browser Web Speech API controller, the dual-engine database adapter with zero-config SQLite fallback, AST security filtering via SQLGlot, and the 59 automated test cases passing in the repository. We detail open-source speech recognition fallbacks, migration methodologies, security governance, and an autonomous test-driven development loop adhering to a strict <em>"zero unverified claims"</em> standard.
+    </p>
+  </div>
+
+  <!-- Section 1 -->
+  <h2>1. Open-Source Speech-to-Text (STT) Options & Fallback Architecture</h2>
+  <p>
+    For voice input, QueryMind’s browser UI currently uses the <strong>Web Speech API (SpeechRecognition)</strong> to capture microphone audio directly inside client JavaScript (<code>static/js/voice_sql.js</code>). The Web Speech API is built into modern Chromium-based browsers (Chrome, Edge) and enables developers to incorporate voice data into web applications without external JavaScript bundles. It provides an immediate, low-latency speech-recognition interface.
+  </p>
+  <p>
+    However, browser support can be inconsistent across platforms (Firefox provides only partial support behind experimental flags, Safari limits custom recognition, and network firewalls may block cloud speech endpoints). To guarantee cross-browser resilience and offline capabilities, we evaluate open-source ASR models and fallback toolkits:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Speech Engine</th>
+        <th style="width: 12%;">License</th>
+        <th style="width: 14%;">Offline / Local</th>
+        <th style="width: 18%;">Browser Support</th>
+        <th style="width: 36%;">Operational Trade-offs & Role</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Web Speech API</strong></td>
+        <td>W3C Standard</td>
+        <td>No (Requires network)</td>
+        <td>Chrome, Edge, Chromium</td>
+        <td><strong>Primary Client Tier:</strong> Zero download size; real-time streaming tokens; highly responsive on desktop and mobile Chrome/Edge.</td>
+      </tr>
+      <tr>
+        <td><strong>OpenAI Whisper (Python)</strong></td>
+        <td>MIT</td>
+        <td>Yes (Local CPU/GPU)</td>
+        <td>Universal (Server Endpoint)</td>
+        <td><strong>High-Accuracy Server Backup:</strong> Encoder-decoder transformer trained on 680k hours; robust to accents; ideal for uploaded audio streams via <code>POST /api/transcribe</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Vosk (Alpha Cephei)</strong></td>
+        <td>Apache 2.0</td>
+        <td>Yes (Lightweight WASM)</td>
+        <td>Modern Browsers via WASM</td>
+        <td><strong>Offline Client/Server Backup:</strong> Compact ~50MB acoustic models; runnable in-browser via WebAssembly or on Flask backend with sub-second inference.</td>
+      </tr>
+      <tr>
+        <td><strong>Coqui STT / Kaldi</strong></td>
+        <td>MPL 2.0 / Apache</td>
+        <td>Yes</td>
+        <td>Server Only</td>
+        <td>Legacy engines; Coqui is discontinued and Kaldi requires complex pipeline compilation. Replaced by Whisper and Vosk in modern architectures.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-success">
+    <div class="callout-title">Core Operating Rule: Pre-Execution Inspection</div>
+    <p>
+      In QueryMind 2.0, the microphone functions strictly as an <strong>input capture mechanism</strong>. Spoken audio is transcribed into the query textarea, where users can inspect, modify, or regenerate the SQL. <strong>Queries are never automatically executed on speech termination.</strong> The user retains authoritative control to click <code>[Run Query]</code> or <code>[Explain Plan]</code>.
+    </p>
+  </div>
+
+  <!-- Section 2 -->
+  <h2>2. Supabase / PostgreSQL Integration & Security Architecture</h2>
+  <p>
+    Integrating Supabase equips QueryMind with an enterprise-grade cloud <strong>PostgreSQL 15+</strong> object-relational database. PostgreSQL is celebrated for its relational data integrity, ACID guarantees, composite indexing, and granular access controls.
+  </p>
+
+  <h3>2.1 Schema Upgrade & Relational Normalization (3NF)</h3>
+  <p>
+    The schema in <code>migrations/001_initial_supabase_postgres_schema.sql</code> elevates the academic database to strict Third Normal Form (3NF), defining explicit Primary Keys (PK), Foreign Keys (FK), composite unique constraints, and stored generated columns:
+  </p>
+  <ul>
+    <li><strong><code>students</code>:</strong> <code>student_id SERIAL PRIMARY KEY</code>, <code>name VARCHAR(150) NOT NULL</code>, <code>division VARCHAR(5)</code>, <code>user_id UUID REFERENCES users(user_id)</code>.</li>
+    <li><strong><code>subjects</code>:</strong> <code>subject_id SERIAL PRIMARY KEY</code>, <code>name VARCHAR(100) UNIQUE</code>, <code>department VARCHAR(50)</code>, <code>credits INT CHECK (credits > 0)</code>.</li>
+    <li><strong><code>marks</code>:</strong> <code>mark_id SERIAL PRIMARY KEY</code>, <code>student_id INT REFERENCES students(student_id) ON DELETE CASCADE</code>, <code>subject_id INT REFERENCES subjects(subject_id) ON DELETE CASCADE</code>, <code>marks NUMERIC(5,2) CHECK (marks >= 0 AND marks <= 100)</code>, composite unique key on <code>(student_id, subject_id, exam_type)</code>.</li>
+    <li><strong><code>attendance</code>:</strong> Generated percentage column:
+      <code>percentage NUMERIC(5,2) GENERATED ALWAYS AS (ROUND((attended::numeric / total_classes::numeric) * 100, 2)) STORED</code>.
+    </li>
+    <li><strong><code>query_logs</code>:</strong> Tracks query executions with <code>input_mode VARCHAR(10) CHECK (input_mode IN ('voice','text'))</code>, execution latency in milliseconds, row counts, and timestamps.</li>
+  </ul>
+
+  <h3>2.2 Row-Level Security (RLS) Policies</h3>
+  <p>
+    Supabase enforces granular authorization directly at the database kernel level using PostgreSQL Row-Level Security:
+  </p>
+  <pre><code>-- Enforce RLS on student profiles and marks
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.marks ENABLE ROW LEVEL SECURITY;
+
+-- Students view only their own records; Faculty and Admins view all
+CREATE POLICY "Student read own profile"
+  ON public.students FOR SELECT
+  USING (
+    auth.uid() IN (SELECT auth_uid FROM public.users WHERE users.user_id = students.user_id)
+    OR EXISTS (SELECT 1 FROM public.users WHERE auth_uid = auth.uid() AND role IN ('faculty', 'admin'))
+  );
+
+CREATE POLICY "Student read own marks"
+  ON public.marks FOR SELECT
+  USING (
+    student_id IN (
+      SELECT s.student_id FROM public.students s
+      JOIN public.users u ON s.user_id = u.user_id
+      WHERE u.auth_uid = auth.uid()
+    )
+    OR EXISTS (SELECT 1 FROM public.users WHERE auth_uid = auth.uid() AND role IN ('faculty', 'admin'))
+  );</code></pre>
+
+  <!-- Section 3 -->
+  <div class="page-break"></div>
+  <h2>3. Data Migration Strategy: SQLite to Cloud Postgres</h2>
+  <p>
+    To ensure seamless transition from local SQLite to Supabase PostgreSQL, QueryMind implements a multi-path migration strategy guaranteeing referential integrity and type parity:
+  </p>
+  <ul>
+    <li><strong>Automated Python Migration Utility (<code>scripts/migrate_sqlite_to_supabase.py</code>):</strong> Connects directly to <code>db/querymind.db</code>, extracts rows from all academic tables, maps SQLite data types to PostgreSQL 15+ equivalents, derives attended/total class ratios, and emits idempotent SQL statements.</li>
+    <li><strong>Transactional Seed Script (<code>migrations/002_data_seed_supabase.sql</code>):</strong> Generates 257 lines of clean SQL wrapped in a <code>BEGIN; ... COMMIT;</code> transaction. Features <code>ON CONFLICT DO NOTHING</code> / <code>DO UPDATE</code> clauses and synchronizes PostgreSQL sequences via <code>setval(pg_get_serial_sequence(...))</code>.</li>
+    <li><strong>Automated Tooling Comparison (<code>pgloader</code>):</strong> For enterprise or continuous production migrations, <code>pgloader</code> can stream SQLite databases directly into PostgreSQL over TCP, handling type transformations and indexes in a single command:
+      <pre><code>pgloader db/querymind.db postgresql://postgres:password@db.supabase.co:5432/postgres</code></pre>
+    </li>
+  </ul>
+
+  <!-- Section 4 -->
+  <h2>4. Dual-Engine Database Adapter Architecture</h2>
+  <p>
+    The application utilizes a Unified Database Adapter (<code>db/supabase_adapter.py</code>) that abstracts the storage engine from application routes:
+  </p>
+
+  <div class="flow-diagram-container">
+    <div style="font-weight: 700; font-size: 8.5pt; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+      Figure 1: Dual-Engine Database Routing and Governance Flow
+    </div>
+    <div class="flow-row">
+      <div class="flow-node client">
+        <div class="flow-node-title">1. Query Request</div>
+        <div class="flow-node-desc">Voice / Text input from Workspace (/api/execute-sql)</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node server">
+        <div class="flow-node-title">2. AST Governance Gate</div>
+        <div class="flow-node-desc">SQLGlot validator enforces SELECT-only & LIMIT 100</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node server">
+        <div class="flow-node-title">3. Dual-Engine Adapter</div>
+        <div class="flow-node-desc">db/supabase_adapter.py inspects environment</div>
+      </div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-arrow" style="transform: rotate(90deg); margin: 0 auto;">&darr;</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node db" style="border-color: #10B981; background: #ECFDF5;">
+        <div class="flow-node-title" style="color: #065F46;">Cloud Mode (SUPABASE_URL set)</div>
+        <div class="flow-node-desc">Supabase PostgreSQL 15+ &bull; RLS Policies &bull; Connection Pooling</div>
+      </div>
+      <div class="flow-arrow" style="font-size: 10pt; color: #94A3B8;">OR</div>
+      <div class="flow-node db" style="border-color: #3B82F6; background: #EFF6FF;">
+        <div class="flow-node-title" style="color: #1E40AF;">Local Mode (Default Fallback)</div>
+        <div class="flow-node-desc">SQLite Embedded (querymind.db) &bull; Zero Setup &bull; CI/CD Testing</div>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    This dual-driver approach allows students and developers to clone and run the application instantly with zero external dependencies, while production deployments seamlessly switch to cloud PostgreSQL with complete RLS enforcement.
+  </p>
+
+  <!-- Section 5 -->
+  <h2>5. Advanced Relational DBMS Features & Pedagogy</h2>
+  <p>
+    QueryMind 2.0 integrates sophisticated relational database internals directly into the user interface:
+  </p>
+  <ul>
+    <li><strong>Query Execution Plan Analyzer (<code>EXPLAIN QUERY PLAN</code>):</strong> Exposed via <code>POST /api/explain-sql</code> and implemented in <code>explain_query_plan()</code>. Parses the DBMS execution tree to identify sequential scans (<code>FULL_TABLE_SCAN</code>), index searches (<code>INDEX_SEARCH</code>), and temporary B-Tree sorting (<code>TEMP_BTREE_SORT</code>). Displayed in an interactive dark-mode drawer on both the Workspace and SQL Playground.</li>
+    <li><strong>Dynamic Entity-Relationship Diagram:</strong> Uses live database catalog introspection (<code>get_database_schema_metadata()</code>) to dynamically render interactive Mermaid ER diagrams reflecting foreign key relationships.</li>
+    <li><strong>Deterministic AST Security Governance:</strong> Employs <strong>SQLGlot</strong> to parse SQL into an Abstract Syntax Tree, strictly permitting <code>SELECT</code> expressions, rejecting all DDL/DML tokens (<code>DROP</code>, <code>INSERT</code>, <code>DELETE</code>), blocking comments and multi-statement semicolons, and automatically appending a <code>LIMIT 100</code> safety ceiling.</li>
+    <li><strong>Auditing & Input Modality Telemetry:</strong> Records all queries into <code>query_logs</code> with millisecond execution latency, row count, user attribution, and an explicit <code>input_mode</code> badge (<code>🎙️ Voice</code> vs <code>⌨️ Text</code>).</li>
+  </ul>
+
+  <!-- Section 6 & 7 -->
+  <div class="page-break"></div>
+  <h2>6. Security, Governance & Verification Architecture</h2>
+  <p>
+    The system implements defense-in-depth across the web and database layers:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Security Layer</th>
+        <th style="width: 35%;">Implementation Mechanism</th>
+        <th style="width: 40%;">Threat Neutralized</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>AST Whitelist Gateway</strong></td>
+        <td>SQLGlot parser in <code>nlp/sql_validator.py</code></td>
+        <td>Blocks SQL injection, DDL drops, data tampering, multi-statement injection, and comment bypasses.</td>
+      </tr>
+      <tr>
+        <td><strong>Row-Level Security (RLS)</strong></td>
+        <td>PostgreSQL kernel policies in Supabase</td>
+        <td>Guarantees multi-tenant data isolation; students cannot query other students' marks or profiles.</td>
+      </tr>
+      <tr>
+        <td><strong>Resource Ceilings</strong></td>
+        <td>Automatic <code>LIMIT 100</code> AST injection</td>
+        <td>Prevents server memory exhaustion and Denial-of-Service via massive table dumps.</td>
+      </tr>
+      <tr>
+        <td><strong>Read-Only Connections</strong></td>
+        <td>SQLite <code>mode=ro</code> & unprivileged Postgres roles</td>
+        <td>Ensures voice queries cannot mutate persistent database state even if application logic is bypassed.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. Automated Testing & Verification Standard</h2>
+  <p>
+    QueryMind 2.0 enforces a strict Test-Driven Development (TDD) protocol:
+    $$\mathbf{Implement} \longrightarrow \mathbf{Automated\ Test} \longrightarrow \mathbf{Identify\ Failures} \longrightarrow \mathbf{Refactor\ \&\ Fix} \longrightarrow \mathbf{Retest\ to\ 100\%}$$
+    <strong>Zero Unverified Claims Policy:</strong> Every claimed capability must be validated by executable automated test cases. The repository currently maintains <strong>59 automated tests</strong> across 4 test suites, all passing with zero errors:
+  </p>
+  <ul>
+    <li><code>tests/test_querymind.py</code> (23 tests): Rule-based NL-to-SQL pattern matching, AST validator, CSV dataset ingestion.</li>
+    <li><code>tests/test_querymind_2.py</code> (26 tests): Spoken number normalization, 3-table joins, threshold filters, async REST endpoints, all 6 page routes.</li>
+    <li><code>tests/test_supabase_adapter.py</code> (3 tests): Database adapter initialization, fallback routing, and live catalog schema introspection.</li>
+    <li><code>tests/test_advanced_dbms.py</code> (7 tests): <code>EXPLAIN QUERY PLAN</code> parser, index search detection, B-tree sorting, injection blocking on explain endpoints, and SQLite-to-Supabase migration generation.</li>
+  </ul>
+
+  <!-- Section 8 -->
+  <h2>8. Autonomous Development Loop Prompt</h2>
+  <div class="prompt-box">
+    <h4>Autonomous Coding Agent Execution Prompt</h4>
+    <p>
+      <strong>System Role:</strong> You are an expert Principal Full-Stack Engineer and Relational Database Systems Architect. Your mission is to maintain and extend QueryMind 2.0 (Voice-to-SQL with Supabase PostgreSQL).
+    </p>
+    <p>
+      <strong>Starting Baseline:</strong> You are working on the <code>querymind-2.0</code> branch with 59/59 passing tests, Web Speech API capture, dual-engine database adapter, and SQLGlot AST validation. Do not re-architect existing working modules.
+    </p>
+    <p>
+      <strong>Autonomous Loop Protocol:</strong>
+      <ol style="margin-left: 16px; margin-top: 4px; color: #E2E8F0;">
+        <li>Read requirement and inspect existing code.</li>
+        <li>Implement targeted changes using clean, documented Python/JS.</li>
+        <li>Immediately run <code>pytest tests/ -v</code>. If any test fails, stop and inspect the traceback.</li>
+        <li>Refactor root causes and retest until 100% of tests pass.</li>
+        <li>Commit passing code with clear commit messages and push to <code>querymind-2.0</code>.</li>
+      </ol>
+    </p>
+    <p>
+      <strong>Non-Negotiable Constraints:</strong> Microphone is strictly an input mechanism; never auto-execute queries on speech end. Always enforce read-only SELECT allow-lists and LIMIT 100 injection. Maintain zero-config SQLite fallback for local development.
+    </p>
+  </div>
+
+  <!-- Section 9 & 10 -->
+  <div class="page-break"></div>
+  <h2>9. Academic Report Outline (Curriculum Standard)</h2>
+  <p>
+    The corresponding academic monograph follows IEEE formal project documentation standards:
+  </p>
+  <ol style="line-height: 1.6;">
+    <li><strong>Title & Abstract:</strong> QueryMind 2.0: A Voice-Driven Relational Database Interface with Cloud PostgreSQL Architecture.</li>
+    <li><strong>Introduction & Problem Formulation:</strong> Bridging conversational natural-language interfaces with rigorous DBMS concepts (schema governance, relational integrity, query processing).</li>
+    <li><strong>System Architecture:</strong> Multi-tier architecture overview: Web Speech API & audio waveform client, Flask application server, SQLGlot AST security gateway, and Supabase cloud PostgreSQL.</li>
+    <li><strong>Relational Database Design & Normalization:</strong> Mathematical formulation of Functional Dependencies; verification of Boyce-Codd / Third Normal Form (3NF); foreign keys, composite indexes, and generated columns.</li>
+    <li><strong>Speech Recognition & Voice Modality:</strong> Client-side Web Speech API analysis; Vosk and OpenAI Whisper fallback tiers; spoken number normalization algorithms.</li>
+    <li><strong>Query Execution & Optimization Pedagogy:</strong> Query execution tree parsing (<code>EXPLAIN QUERY PLAN</code>); sequential table scans vs index-accelerated B-tree searches; temporary sorting buffers.</li>
+    <li><strong>Security & Row-Level Access Governance:</strong> SQLGlot AST token allow-listing; SQL injection mitigation; PostgreSQL kernel-level Row-Level Security (RLS) policies.</li>
+    <li><strong>Data Migration & Dual-Engine Strategy:</strong> SQLite-to-PostgreSQL data translation, sequence alignment, and dual-driver adapter architecture.</li>
+    <li><strong>Verification & Test-Driven Development:</strong> Multi-tier test suite analysis (59 passing tests); security fuzzing; execution latency metrics (&lt; 20ms).</li>
+    <li><strong>Conclusion & Future Extensions:</strong> Project achievements, limitations (browser STT variance), and future integration of local quantized LLMs.</li>
+  </ol>
+
+  <h2>10. References & Primary Sources</h2>
+  <ol style="font-size: 8.5pt; line-height: 1.55;">
+    <li><strong>Mozilla Developer Network (MDN):</strong> <em>Web Speech API Specification & SpeechRecognition Guide</em>, W3C Community Group.</li>
+    <li><strong>PostgreSQL Global Development Group:</strong> <em>PostgreSQL 15.0 Documentation: Row Security Policies, Generated Columns & Explain Plans</em>, postgresql.org/docs.</li>
+    <li><strong>Supabase Inc.:</strong> <em>Supabase Architecture, Row Level Security (RLS), and Postgres Audit (pgaudit) Guides</em>, supabase.com/docs.</li>
+    <li><strong>Alpha Cephei:</strong> <em>Vosk Speech Recognition Toolkit & WebAssembly Runtime</em>, Apache 2.0 License, alphacephei.com/vosk.</li>
+    <li><strong>Radford, A., et al.:</strong> <em>Robust Speech Recognition via Large-Scale Weak Supervision (Whisper)</em>, OpenAI, arXiv:2212.04356.</li>
+    <li><strong>Mao, Toby:</strong> <em>SQLGlot: A Modular Python SQL Parser, Transpiler, Optimizer, and Engine</em>, github.com/tobymao/sqlglot.</li>
+    <li><strong>Dimitri Fontaine:</strong> <em>pgloader: Open Source Data Migration Tool for PostgreSQL</em>, pgloader.io.</li>
+    <li><strong>OWASP Foundation:</strong> <em>SQL Injection Prevention Cheat Sheet & Defense in Depth Principles</em>, cheatsheetseries.owasp.org.</li>
+  </ol>
+
+</body>
+</html>

@@ -5,6 +5,22 @@ SQLite-compatible queries. 13 patterns covering all spec examples.
 
 import re
 
+SPOKEN_NUMBER_MAP = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "fifteen": 15, "twenty": 20, "twenty five": 25, "thirty": 30,
+    "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+    "seventy five": 75, "eighty": 80, "eighty five": 85,
+    "ninety": 90, "hundred": 100
+}
+
+def normalize_spoken_numbers(text: str) -> str:
+    """Normalize spoken English number words to digits for robust voice transcription."""
+    res = text.lower()
+    for word, num in sorted(SPOKEN_NUMBER_MAP.items(), key=lambda x: -len(x[0])):
+        res = re.sub(r"\b" + re.escape(word) + r"\b", str(num), res)
+    return res
+
 PATTERNS = [
     # Top N students by average marks
     {
@@ -70,13 +86,13 @@ PATTERNS = [
     {
         "keywords": ["student","attendance","below"],
         "template": (
-            "SELECT s.name, s.division, "
-            "ROUND(AVG(a.attendance_percentage),2) AS avg_attendance "
+            "SELECT s.student_id, s.name, s.division, "
+            "ROUND(AVG(a.attendance_percentage),2) AS attendance_percentage "
             "FROM students s "
             "JOIN attendance a ON s.student_id = a.student_id "
             "GROUP BY s.student_id, s.name, s.division "
-            "HAVING avg_attendance < {threshold} "
-            "ORDER BY avg_attendance"
+            "HAVING attendance_percentage < {threshold} "
+            "ORDER BY attendance_percentage"
         ),
         "extract": {"threshold": r"\b(\d+)\b"},
         "defaults": {"threshold": 75},
@@ -110,9 +126,69 @@ PATTERNS = [
         "defaults": {},
         "description": "Average marks per subject",
     },
-    # All students
+    # All students / student names / student list
+    {
+        "keywords": ["student","name","list"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
+    {
+        "keywords": ["student","list"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
+    {
+        "keywords": ["student","name"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
     {
         "keywords": ["show","all","student"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
+    {
+        "keywords": ["show","student"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
+    {
+        "keywords": ["all","student"],
+        "template": (
+            "SELECT student_id, name, division, email "
+            "FROM students ORDER BY name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All students",
+    },
+    {
+        "keywords": ["get","student"],
         "template": (
             "SELECT student_id, name, division, email "
             "FROM students ORDER BY name"
@@ -132,6 +208,87 @@ PATTERNS = [
         "defaults": {},
         "description": "All subjects",
     },
+    {
+        "keywords": ["all","subject"],
+        "template": (
+            "SELECT subject_id, subject_name, credits "
+            "FROM subjects ORDER BY subject_name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All subjects",
+    },
+    {
+        "keywords": ["subject","list"],
+        "template": (
+            "SELECT subject_id, subject_name, credits "
+            "FROM subjects ORDER BY subject_name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All subjects",
+    },
+    {
+        "keywords": ["get","subject"],
+        "template": (
+            "SELECT subject_id, subject_name, credits "
+            "FROM subjects ORDER BY subject_name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "All subjects",
+    },
+    # Attendance list
+    {
+        "keywords": ["attendance","list"],
+        "template": (
+            "SELECT s.student_id, s.name, s.division, a.attendance_percentage "
+            "FROM students s "
+            "JOIN attendance a ON s.student_id = a.student_id "
+            "ORDER BY s.name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Student attendance records",
+    },
+    {
+        "keywords": ["show","attendance"],
+        "template": (
+            "SELECT s.student_id, s.name, s.division, a.attendance_percentage "
+            "FROM students s "
+            "JOIN attendance a ON s.student_id = a.student_id "
+            "ORDER BY s.name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Student attendance records",
+    },
+    {
+        "keywords": ["all","attendance"],
+        "template": (
+            "SELECT s.student_id, s.name, s.division, a.attendance_percentage "
+            "FROM students s "
+            "JOIN attendance a ON s.student_id = a.student_id "
+            "ORDER BY s.name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Student attendance records",
+    },
+    # Show students and their subject marks (Relational 3-table JOIN)
+    {
+        "keywords": ["student","subject","mark"],
+        "template": (
+            "SELECT s.student_id, s.name, s.division, sub.subject_name, m.marks "
+            "FROM students s "
+            "JOIN marks m ON s.student_id = m.student_id "
+            "JOIN subjects sub ON m.subject_id = sub.subject_id "
+            "ORDER BY s.name, sub.subject_name"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Students and their subject marks",
+    },
     # Count students per division
     {
         "keywords": ["count","student","division"],
@@ -142,6 +299,17 @@ PATTERNS = [
         "extract": {},
         "defaults": {},
         "description": "Student count per division",
+    },
+    # Count students in each department (Academic department alias for division)
+    {
+        "keywords": ["count","student","department"],
+        "template": (
+            "SELECT division AS department, COUNT(*) AS student_count "
+            "FROM students GROUP BY division ORDER BY division"
+        ),
+        "extract": {},
+        "defaults": {},
+        "description": "Student count per department",
     },
     # Top N by raw marks
     {
@@ -183,7 +351,8 @@ PATTERNS = [
 
 
 def _tokens(question: str) -> set:
-    words = re.sub(r"[^a-z0-9\s]", "", question.lower()).split()
+    q_norm = normalize_spoken_numbers(question)
+    words = re.sub(r"[^a-z0-9\s]", "", q_norm.lower()).split()
     out = set()
     for w in words:
         out.add(w)
@@ -193,7 +362,9 @@ def _tokens(question: str) -> set:
 
 
 def generate_sql(question: str) -> dict:
-    toks = _tokens(question)
+    q_norm = normalize_spoken_numbers(question)
+    toks = _tokens(q_norm)
+    q_clean = q_norm.lower().strip()
 
     best, score = None, 0
     for p in PATTERNS:
@@ -204,7 +375,7 @@ def generate_sql(question: str) -> dict:
     if best and score >= 2:
         params = dict(best["defaults"])
         for key, rx in best["extract"].items():
-            m = re.search(rx, question)
+            m = re.search(rx, q_norm)
             if m:
                 params[key] = int(m.group(1))
         sql  = best["template"].format(**params)
@@ -214,6 +385,44 @@ def generate_sql(question: str) -> dict:
         except KeyError:
             pass
         return {"sql": sql, "description": desc, "matched": True, "confidence": score}
+
+    # Direct semantic resolution for unambiguous academic entity listings
+    has_student = "student" in toks or "students" in q_clean
+    has_subject = "subject" in toks or "subjects" in q_clean
+    has_attendance = "attendance" in toks
+    has_mark = "mark" in toks or "marks" in q_clean or "score" in toks or "scores" in q_clean
+
+    # 1. Student listings (e.g. "can I get the name list of students", "student names", "list of students")
+    if has_student and not (has_attendance or has_mark or "department" in toks or "division" in toks or "above" in toks or "below" in toks):
+        return {
+            "sql": "SELECT student_id, name, division, email FROM students ORDER BY name",
+            "description": "All students",
+            "matched": True,
+            "confidence": 3,
+        }
+
+    # 2. Subject listings (e.g. "list of subjects", "all subjects", "subject names")
+    if has_subject and not (has_mark or has_student or "above" in toks or "below" in toks):
+        return {
+            "sql": "SELECT subject_id, subject_name, credits FROM subjects ORDER BY subject_name",
+            "description": "All subjects",
+            "matched": True,
+            "confidence": 3,
+        }
+
+    # 3. Attendance listings
+    if has_attendance and not ("below" in toks or "division" in toks or "threshold" in toks):
+        return {
+            "sql": (
+                "SELECT s.student_id, s.name, s.division, a.attendance_percentage "
+                "FROM students s "
+                "JOIN attendance a ON s.student_id = a.student_id "
+                "ORDER BY s.name"
+            ),
+            "description": "Student attendance records",
+            "matched": True,
+            "confidence": 3,
+        }
 
     return {
         "sql": None,
@@ -342,11 +551,15 @@ def generate_sql_for_dataset(question: str, table_name: str, columns: list) -> d
 
     # 7. Show all / list ("sabhi data dikhao", "show all")
     if is_show_all:
-        return {
-            "sql": f"SELECT * FROM {tbl} LIMIT 100",
-            "description": f"All records from {table_name}",
-            "matched": True, "confidence": 3,
-        }
+        tbl_clean = table_name.lower().replace("_", " ")
+        tbl_hit = (table_name.lower() in q) or (tbl_clean in q) or any(w in toks for w in table_name.lower().split("_") if len(w) > 3)
+        has_generic_data_words = any(w in toks or w in q for w in ("data", "record", "records", "table", "dataset", "row", "rows"))
+        if tbl_hit or mentioned_col or has_generic_data_words:
+            return {
+                "sql": f"SELECT * FROM {tbl} LIMIT 100",
+                "description": f"All records from {table_name}",
+                "matched": True, "confidence": 3,
+            }
 
     # 8. Filter by exact column if mentioned
     if mentioned_col:
@@ -356,9 +569,10 @@ def generate_sql_for_dataset(question: str, table_name: str, columns: list) -> d
             "matched": True, "confidence": 2,
         }
 
-    # Default fallback
+    # Do not invent arbitrary SQL if no intent or column matched
     return {
-        "sql": f"SELECT * FROM {tbl} LIMIT 50",
-        "description": f"First 50 records from {table_name}",
-        "matched": True, "confidence": 1,
+        "sql": None,
+        "description": f"Could not determine valid query operation on dataset '{table_name}'.",
+        "matched": False,
+        "confidence": 0,
     }

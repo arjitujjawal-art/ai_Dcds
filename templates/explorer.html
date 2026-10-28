@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Database Explorer &amp; ER Model — QueryMind 2.0 DBMS{% endblock %}
+
+{% block breadcrumb %}Database Explorer &bull; Live Relational Schema{% endblock %}
+
+{% block content %}
+<div class="page-container explorer-container">
+
+  <!-- Explorer Header -->
+  <div class="explorer-header-bar">
+    <div class="ehb-left">
+      <h1 class="page-heading">Database Explorer &amp; Relational ER Model</h1>
+      <p class="page-subheading">
+        Introspect physical SQLite tables, data types, primary keys, foreign key constraints, and entity-relationship cardinality.
+      </p>
+    </div>
+    <div class="ehb-right">
+      <div class="schema-stats-badge">
+        <span><strong>{{ schema_meta.tables|length }}</strong> Tables</span>
+        <span class="sep">&bull;</span>
+        <span><strong>{{ schema_meta.relationships|length }}</strong> Foreign Key Constraints</span>
+        <span class="sep">&bull;</span>
+        <span class="db-live-pill">SQLite Live</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explorer Navigation Tabs -->
+  <div class="explorer-view-tabs mt-4">
+    <button type="button" class="tab-pill active" id="tabSchemaBtn" onclick="switchExplorerTab('schema')">
+      <span class="tab-icon">🗄️</span> Table Schema &amp; Sample Data
+    </button>
+    <button type="button" class="tab-pill" id="tabErBtn" onclick="switchExplorerTab('er')">
+      <span class="tab-icon">📐</span> Live Relational ER Diagram
+    </button>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       VIEW 1: TABLE SCHEMA & SAMPLE DATA
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="explorer-layout-grid mt-4" id="explorerSchemaView">
+    
+    <!-- Table Selector Rail -->
+    <div class="explorer-sidebar-rail">
+      <div class="rail-title">Database Tables</div>
+      <div class="table-list-group">
+        {% for tbl_name, tbl_data in schema_meta.tables.items() %}
+        <button type="button" 
+                class="table-nav-item {% if loop.first %}active{% endif %}" 
+                id="btn-tbl-{{ tbl_name }}"
+                onclick="selectTable('{{ tbl_name }}')">
+          <div class="tni-top">
+            <span class="tni-name">{{ tbl_name }}</span>
+            <span class="tni-count">{{ tbl_data.row_count }} rows</span>
+          </div>
+          <div class="tni-meta">
+            <span class="badge-cat badge-cat-{{ tbl_data.category }}">{{ tbl_data.category|replace('_', ' ')|title }}</span>
+            <span class="tni-cols">{{ tbl_data.columns|length }} cols</span>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Active Table Schema & Data Viewer -->
+    <div class="explorer-content-card">
+      {% for tbl_name, tbl_data in schema_meta.tables.items() %}
+      <div class="table-detail-panel {% if not loop.first %}hidden{% endif %}" id="panel-{{ tbl_name }}">
+        
+        <div class="detail-header-row">
+          <div>
+            <h2 class="table-heading">{{ tbl_name }}</h2>
+            <p class="table-submeta">
+              {{ tbl_data.row_count }} total records &bull; {{ tbl_data.columns|length }} columns &bull; Classification: <strong>{{ tbl_data.category|replace('_', ' ')|title }}</strong>
+            </p>
+          </div>
+          <div class="table-actions-right">
+            <a href="{{ url_for('voice_sql_workspace') }}?q=Show+all+records+from+{{ tbl_name }}" class="btn-query-table">
+              🎙️ Query in Voice Workspace
+            </a>
+          </div>
+        </div>
+
+        <!-- Column Specifications Table -->
+        <h3 class="subsection-title mt-4">Physical Column Schema</h3>
+        <div class="table-scroll-container mt-2">
+          <table class="data-table-modern">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th>Column Name</th>
+                <th>Data Type</th>
+                <th>Primary Key</th>
+                <th>Foreign Key Constraint</th>
+                <th>Nullable</th>
+                <th>Default Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for col in tbl_data.columns %}
+              <tr>
+                <td class="row-num">{{ loop.index }}</td>
+                <td>
+                  <strong class="col-name">{{ col.name }}</strong>
+                </td>
+                <td>
+                  <span class="badge-dtype">{{ col.type }}</span>
+                </td>
+                <td>
+                  {% if col.pk %}
+                  <span class="badge-pk">🔑 PRIMARY KEY</span>
+                  {% else %}
+                  <span class="text-muted-dash">&mdash;</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if col.fk %}
+                  <span class="badge-fk" title="References {{ col.fk.table }}({{ col.fk.to_column }})">
+                    🔗 REFERENCES {{ col.fk.table }}({{ col.fk.to_column }})
+                  </span>
+                  {% else %}
+                  <span class="text-muted-dash">&mdash;</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if col.notnull %}
+                  <span class="badge-notnull">NOT NULL</span>
+                  {% else %}
+                  <span class="badge-null">NULLABLE</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if col.default is not none %}
+                  <code>{{ col.default }}</code>
+                  {% else %}
+                  <span class="text-muted-dash">&mdash;</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sample Records Preview -->
+        <h3 class="subsection-title mt-6">Live Sample Records (5 Rows Preview)</h3>
+        <div class="table-scroll-container mt-2">
+          {% if tbl_data.sample_rows and tbl_data.sample_rows|length > 0 %}
+          <table class="data-table-modern">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                {% for col in tbl_data.columns %}
+                <th>{{ col.name|replace('_', ' ')|upper }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in tbl_data.sample_rows %}
+              <tr>
+                <td class="row-num">{{ loop.index }}</td>
+                {% for col in tbl_data.columns %}
+                <td>{{ row[col.name] if row[col.name] is not none else 'NULL' }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty-state-compact">
+            <p>No sample records currently present in this table.</p>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       VIEW 2: LIVE RELATIONAL ER DIAGRAM (Mermaid.js)
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="er-diagram-container hidden mt-4" id="explorerErView">
+    <div class="er-card">
+      <div class="er-card-header">
+        <div>
+          <h2 class="card-main-title">Entity-Relationship (ER) Architecture</h2>
+          <p class="card-sub-title">Dynamically constructed from SQLite schema catalogs and foreign-key constraints.</p>
+        </div>
+        <div class="er-legend">
+          <span class="legend-item"><span class="badge-pk">PK</span> Primary Key</span>
+          <span class="legend-item"><span class="badge-fk">FK</span> Foreign Key</span>
+          <span class="legend-item"><span class="legend-connector">||--o{</span> 1-to-Many Relationship</span>
+        </div>
+      </div>
+
+      <!-- Mermaid ER Diagram Canvas -->
+      <div class="mermaid-diagram-box mt-4">
+        <div class="mermaid" id="erMermaidDiagram">
+{{ schema_meta.er_mermaid }}
+        </div>
+      </div>
+
+      <!-- Raw Mermaid Schema Definition Collapsible -->
+      <details class="er-raw-details mt-4">
+        <summary class="er-raw-summary">View Generated Mermaid Syntax Definition</summary>
+        <pre class="er-raw-code"><code>{{ schema_meta.er_mermaid }}</code></pre>
+      </details>
+    </div>
+  </div>
+
+</div>
+
+<!-- Mermaid.js for interactive rendering -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    er: {
+      useMaxWidth: true,
+      layoutDirection: 'TB'
+    }
+  });
+
+  function selectTable(tableName) {
+    // Hide all panels
+    document.querySelectorAll('.table-detail-panel').forEach(panel => {
+      panel.classList.add('hidden');
+    });
+    // Deselect all rail buttons
+    document.querySelectorAll('.table-nav-item').forEach(btn => {
+      btn.classList.remove('active');
+    });
+
+    // Show target panel
+    const targetPanel = document.getElementById(`panel-${tableName}`);
+    if (targetPanel) targetPanel.classList.remove('hidden');
+
+    // Activate rail button
+    const targetBtn = document.getElementById(`btn-tbl-${tableName}`);
+    if (targetBtn) targetBtn.classList.add('active');
+  }
+
+  function switchExplorerTab(tab) {
+    const tabSchemaBtn = document.getElementById('tabSchemaBtn');
+    const tabErBtn = document.getElementById('tabErBtn');
+    const schemaView = document.getElementById('explorerSchemaView');
+    const erView = document.getElementById('explorerErView');
+
+    if (tab === 'er') {
+      tabErBtn.classList.add('active');
+      tabSchemaBtn.classList.remove('active');
+      erView.classList.remove('hidden');
+      schemaView.classList.add('hidden');
+    } else {
+      tabSchemaBtn.classList.add('active');
+      tabErBtn.classList.remove('active');
+      schemaView.classList.remove('hidden');
+      erView.classList.add('hidden');
+    }
+  }
+</script>
+{% endblock %}

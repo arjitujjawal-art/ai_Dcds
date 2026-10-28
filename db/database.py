@@ -69,7 +69,6 @@ def _setup():
         attendance_percentage REAL NOT NULL
     );
 
-    -- Logging tables
     CREATE TABLE IF NOT EXISTS query_logs (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id          INTEGER,
@@ -80,6 +79,7 @@ def _setup():
         execution_time_ms INTEGER,
         result_row_count INTEGER,
         error            TEXT,
+        input_mode       TEXT DEFAULT 'text',
         timestamp        TEXT DEFAULT (datetime('now'))
     );
 
@@ -102,6 +102,14 @@ def _setup():
         timestamp TEXT DEFAULT (datetime('now'))
     );
     """)
+
+    # Migration for query_logs input_mode
+    try:
+        col_names = [col[1] for col in c.execute("PRAGMA table_info(query_logs)").fetchall()]
+        if "input_mode" not in col_names:
+            c.execute("ALTER TABLE query_logs ADD COLUMN input_mode TEXT DEFAULT 'text'")
+    except Exception:
+        pass
 
     # ── Seed only if empty ────────────────────────────────────────────────────
     if c.execute("SELECT COUNT(*) FROM app_users").fetchone()[0] == 0:
@@ -199,21 +207,95 @@ def execute_query(sql: str, max_rows: int = 500):
                 "execution_ms": elapsed, "error": str(exc)}
 
 
+def explain_query_plan(sql: str) -> dict:
+    """
+    Run EXPLAIN QUERY PLAN on a validated SELECT query to introspect
+    the DBMS query execution tree, scan strategies, and B-Tree usage.
+    """
+    import re
+    try:
+        conn = _conn()
+        c = conn.cursor()
+        c.execute(f"EXPLAIN QUERY PLAN {sql}")
+        raw_rows = c.fetchall()
+        conn.close()
+
+        plan_steps = []
+        has_index_scan = False
+        has_temp_btree = False
+        tables_accessed = []
+
+        for r in raw_rows:
+            step_id = r[0] if len(r) > 0 else 0
+            parent_id = r[1] if len(r) > 1 else 0
+            detail = r[3] if len(r) > 3 else (r[0] if isinstance(r[0], str) else str(r))
+
+            step_type = "SCAN"
+            if "SEARCH" in detail.upper():
+                step_type = "INDEX_SEARCH"
+                has_index_scan = True
+            elif "SCAN" in detail.upper():
+                step_type = "FULL_TABLE_SCAN"
+            elif "USE TEMP B-TREE" in detail.upper():
+                step_type = "TEMP_BTREE_SORT"
+                has_temp_btree = True
+            elif "COMPOUND" in detail.upper():
+                step_type = "COMPOUND_SUBQUERY"
+
+            tbl_match = re.search(r"(?:SCAN|SEARCH)\s+(?:TABLE\s+)?([a-zA-Z0-9_]+)", detail, re.IGNORECASE)
+            tbl = tbl_match.group(1) if tbl_match else None
+
+            plan_steps.append({
+                "id": step_id,
+                "parent": parent_id,
+                "detail": detail,
+                "step_type": step_type,
+                "table": tbl
+            })
+
+        # Detect all database tables referenced in the query
+        for kt in ["students", "marks", "subjects", "attendance", "app_users", "query_logs", "audit_logs"]:
+            if re.search(rf"\b{kt}\b", sql, re.IGNORECASE) and kt not in tables_accessed:
+                tables_accessed.append(kt)
+
+        return {
+            "status": "success",
+            "sql": sql,
+            "steps": plan_steps,
+            "summary": {
+                "step_count": len(plan_steps),
+                "has_index_scan": has_index_scan,
+                "has_temp_btree": has_temp_btree,
+                "tables_accessed": tables_accessed,
+                "optimization_level": "High (Indexed)" if has_index_scan and not has_temp_btree else ("Moderate (Sorted with B-Tree)" if has_temp_btree else "Sequential (Full Scan)")
+            },
+            "error": None
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "sql": sql,
+            "steps": [],
+            "summary": {},
+            "error": str(exc)
+        }
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # LOGGING
 # ══════════════════════════════════════════════════════════════════════════════
 
 def log_query(user_id, username, question, sql, status,
-              execution_ms, row_count, error=None):
+              execution_ms, row_count, error=None, input_mode="text"):
     try:
         conn = _conn()
         conn.execute(
             """INSERT INTO query_logs
                (user_id, username, question, generated_sql, status,
-                execution_time_ms, result_row_count, error)
-               VALUES (?,?,?,?,?,?,?,?)""",
+                execution_time_ms, result_row_count, error, input_mode)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (user_id, username, question, sql, status,
-             execution_ms, row_count, error)
+             execution_ms, row_count, error, input_mode)
         )
         conn.commit()
         conn.close()
@@ -283,6 +365,126 @@ def get_feedback(limit=100):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def generate_er_diagram_mermaid(schema_dict: dict, relationships: list) -> str:
+    """Generate Mermaid ER syntax from real introspected SQLite metadata."""
+    lines = ["erDiagram"]
+    er_tables = ["students", "subjects", "marks", "attendance"]
+    for t in schema_dict:
+        if t not in er_tables and schema_dict[t]["category"] != "system":
+            er_tables.append(t)
+
+    for tbl_name in er_tables:
+        if tbl_name not in schema_dict:
+            continue
+        tbl = schema_dict[tbl_name]
+        lines.append(f"    {tbl_name} {{")
+        for c in tbl["columns"]:
+            c_type = (c["type"] or "TEXT").split("(")[0].strip()
+            m_type = "string"
+            if "INT" in c_type.upper():
+                m_type = "int"
+            elif any(f in c_type.upper() for f in ("REAL", "FLOAT", "NUMERIC", "DECIMAL", "DOUBLE")):
+                m_type = "float"
+
+            flag = ""
+            if c["pk"]:
+                flag = "PK"
+            elif c["fk"]:
+                flag = "FK"
+            lines.append(f"        {m_type} {c['name']} {flag}".rstrip())
+        lines.append("    }")
+
+    for rel in relationships:
+        if rel["from_table"] in er_tables and rel["to_table"] in er_tables:
+            label = f"{rel['from_column']}"
+            lines.append(f'    {rel["to_table"]} ||--o{{ {rel["from_table"]} : "{label}"')
+
+    return "\n".join(lines)
+
+
+def get_database_schema_metadata() -> dict:
+    """
+    Introspect live SQLite metadata for all tables, columns, constraints,
+    primary keys, foreign keys, row counts, and sample records.
+    """
+    conn = _conn()
+    tables = [
+        r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+    ]
+
+    schema_dict = {}
+    er_relationships = []
+
+    for tbl in tables:
+        col_info = conn.execute(f'PRAGMA table_info("{tbl}")').fetchall()
+        fk_list = conn.execute(f'PRAGMA foreign_key_list("{tbl}")').fetchall()
+
+        fk_map = {}
+        for fk in fk_list:
+            from_col = fk[3]
+            to_tbl = fk[2]
+            to_col = fk[4]
+            fk_map[from_col] = {"table": to_tbl, "to_column": to_col}
+            er_relationships.append({
+                "from_table": tbl,
+                "from_column": from_col,
+                "to_table": to_tbl,
+                "to_column": to_col,
+            })
+
+        columns = []
+        for c in col_info:
+            cid, cname, ctype, notnull, dflt, pk = c
+            columns.append({
+                "name": cname,
+                "type": ctype or "TEXT",
+                "notnull": bool(notnull),
+                "default": dflt,
+                "pk": bool(pk),
+                "fk": fk_map.get(cname),
+            })
+
+        try:
+            row_count = conn.execute(f'SELECT COUNT(*) FROM "{tbl}"').fetchone()[0]
+        except Exception:
+            row_count = 0
+
+        sample_rows = []
+        try:
+            raw_sample = conn.execute(f'SELECT * FROM "{tbl}" LIMIT 5').fetchall()
+            col_names = [col["name"] for col in columns]
+            sample_rows = [dict(zip(col_names, r)) for r in raw_sample]
+        except Exception:
+            pass
+
+        category = "academic"
+        if tbl in ("app_users", "query_logs", "audit_logs", "query_feedback", "dataset_registry"):
+            category = "system"
+        elif tbl not in ("students", "subjects", "marks", "attendance"):
+            category = "custom_dataset"
+
+        schema_dict[tbl] = {
+            "table_name": tbl,
+            "category": category,
+            "columns": columns,
+            "foreign_keys": list(fk_map.values()),
+            "row_count": row_count,
+            "sample_rows": sample_rows,
+        }
+
+    conn.close()
+
+    mermaid = generate_er_diagram_mermaid(schema_dict, er_relationships)
+
+    return {
+        "tables": schema_dict,
+        "relationships": er_relationships,
+        "er_mermaid": mermaid,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
