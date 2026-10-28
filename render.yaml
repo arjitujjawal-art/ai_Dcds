@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: querymind-2
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 2 --threads 4 --timeout 120 wsgi:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true

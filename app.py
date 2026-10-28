@@ -8,6 +8,7 @@ import csv
 import io
 import json
 import re
+import datetime
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -54,7 +55,19 @@ from db.database import (
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = "querymind-secret-2024-change-in-prod"
+app.secret_key = os.environ.get("SECRET_KEY", "querymind-secret-2024-change-in-prod")
+
+
+@app.route("/health")
+def health_check():
+    """Liveness probe & readiness health check endpoint for production load balancers."""
+    return jsonify({
+        "status": "healthy",
+        "service": "QueryMind 2.0 DBMS",
+        "version": "2.0.0",
+        "database": "sqlite_ready",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }), 200
 
 
 # ─── Decorators ───────────────────────────────────────────────────────────────
@@ -1113,4 +1126,6 @@ def api_schema():
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ("true", "1", "t")
+    app.run(debug=debug_mode, host="0.0.0.0", port=port)

@@ -1,6 +1,6 @@
 # QueryMind 2.0 — Voice-Enabled Relational Database Management System
 
-[![Pytest Tests](https://img.shields.io/badge/pytest-99%2F99%20passing-brightgreen.svg)](tests/)
+[![Pytest Tests](https://img.shields.io/badge/pytest-101%2F101%20passing-brightgreen.svg)](tests/)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Database Engines](https://img.shields.io/badge/database-SQLite%20(WAL)%20%7C%20Supabase%20Postgres-purple.svg)](db/)
 [![Security Governance](https://img.shields.io/badge/security-SQLGlot%20AST%20%7C%20PostgreSQL%20RLS-orange.svg)](nlp/sql_validator.py)
@@ -201,6 +201,47 @@ python scripts/migrate_sqlite_to_supabase.py
 ```
 
 If Supabase credentials are not provided, QueryMind 2.0 automatically runs on its local, zero-configuration SQLite engine in WAL mode.
+
+---
+
+## 🚀 Production Deployment Guide
+
+QueryMind 2.0 is fully containerized and production-ready for deployment across any cloud provider or bare-metal environment.
+
+### Option 1: Docker / Container Deployment (Recommended)
+Build and run with a single command:
+```bash
+# Using Docker Compose:
+docker-compose up -d --build
+
+# Or using plain Docker:
+docker build -t querymind-2 .
+docker run -d -p 5000:5000 --name querymind querymind-2
+```
+Test health check:
+```bash
+curl http://localhost:5000/health
+# Returns: {"status": "healthy", "service": "QueryMind 2.0 DBMS", "database": "sqlite_ready"}
+```
+
+### Option 2: 1-Click Cloud Deployment (Render / Railway / Heroku)
+- **Render.com:** Connect your GitHub repository. Render automatically detects [`render.yaml`](render.yaml) and [`Procfile`](Procfile), building with Python 3.11 and launching with Gunicorn WSGI.
+- **Railway.app / Heroku:** Connect repo, configure environment variables from [`.env.example`](.env.example), and deploy.
+
+### Option 3: Standard Production WSGI Server (Linux / VPS)
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Run with Gunicorn (multi-threaded production WSGI)
+gunicorn --workers 2 --threads 4 --timeout 120 wsgi:app --bind 0.0.0.0:5000
+```
+
+### Option 4: Production on Windows (Waitress)
+```bash
+pip install waitress
+waitress-serve --port=5000 wsgi:app
+```
 
 ---
 

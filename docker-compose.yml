@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  querymind:
+    build: .
+    container_name: querymind-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - FLASK_ENV=production
+      - SECRET_KEY=querymind-production-secure-key-2024
+    volumes:
+      - querymind-data:/app/db
+
+volumes:
+  querymind-data:
+    driver: local

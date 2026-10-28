@@ -243,3 +243,12 @@ class TestCorePageRoutes:
         res = client.get("/admin")
         assert res.status_code == 200
         assert b"Administration &amp; System Governance" in res.data
+
+    def test_health_endpoint_returns_200(self, client):
+        res = client.get("/health")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["status"] == "healthy"
+        assert "QueryMind" in data["service"]
+        assert "timestamp" in data
+
