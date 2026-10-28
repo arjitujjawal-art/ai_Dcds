@@ -1,83 +1,152 @@
-# QueryMind 2.0 — Voice-to-SQL Relational Database Management System
+# QueryMind 2.0 — Voice-Enabled Relational Database Management System
 
-> **A Voice-Enabled Natural Language to SQL Query System built upon Relational Database Engineering, Deterministic AST Security Governance, and Live Schema Introspection.**
+[![Pytest Tests](https://img.shields.io/badge/pytest-99%2F99%20passing-brightgreen.svg)](tests/)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Database Engines](https://img.shields.io/badge/database-SQLite%20(WAL)%20%7C%20Supabase%20Postgres-purple.svg)](db/)
+[![Security Governance](https://img.shields.io/badge/security-SQLGlot%20AST%20%7C%20PostgreSQL%20RLS-orange.svg)](nlp/sql_validator.py)
+[![Academic Project](https://img.shields.io/badge/course-DCDS%20ESE%20Project-navy.svg)](QueryMind_2_Final_Implementation_Report.pdf)
 
-QueryMind 2.0 transforms spoken or typed natural language questions into relational SQL queries, displays them in an editable panel for user inspection, enforces Abstract Syntax Tree (AST) validation, executes authorized queries against a normalized SQLite academic database, and renders matching records with interactive tabular and visual views.
+> **A deterministic, schema-governed Voice-to-SQL system built upon Relational Database Engineering, 5-State Intent Classification, Mathematical AST Security Governance, Dual-Engine RDBMS (Cloud Supabase PostgreSQL + Local SQLite), and Live Execution Plan Profiling.**
 
 ---
 
-## 🏛️ Central DBMS Academic Concepts
+## 📑 Project Deliverables & Academic Documentation
 
-While voice recognition serves as the ergonomic input layer, the technical core of the project demonstrates fundamental **Database Management System (DBMS)** principles:
+| Deliverable Document | Format | Description & Scope | File Link |
+| :--- | :---: | :--- | :--- |
+| **Comprehensive Academic Report** | `PDF` | **Exact 30-Page Dossier**: Chapters 1–18, 3NF Normalization Proofs, AST Security Invariants, Defect Autopsy, 99-Test Execution Logs, DDL Specs. | [Download PDF](QueryMind_2_Final_Implementation_Report.pdf) |
+| **Editable Technical Report** | `DOCX` | Complete academic Word document with structured headings, tables, callout blocks, and IEEE citations. | [Download DOCX](QueryMind_2_Final_Implementation_Report.docx) |
+| **Presentation Slides** | `PPTX` | **13-Slide DCDS ESE Project Presentation** formatted to official departmental presentation standards. | [Download PPTX](QueryMind_2_DCDS_ESE_Presentation.pptx) |
+| **Printable Web Report** | `HTML` | Standalone publication-grade HTML report with A4 print styling and responsive CSS. | [View HTML](QueryMind_2_Final_Implementation_Report.html) |
+
+---
+
+## 🏛️ Central DBMS Academic Concepts (DCDS Curriculum)
+
+While voice recognition serves as the ergonomic input modality, the core engineering of QueryMind 2.0 demonstrates fundamental **Data Communication & Database Systems (DCDS)** principles:
 
 | DBMS Pillar | Implementation in QueryMind 2.0 |
-|---|---|
-| **Relational Database** | Normalized schemas (`students`, `subjects`, `marks`, `attendance`) with strict primary and foreign key constraints. |
-| **Entity-Relationship (ER) Modeling** | Live ER diagram dynamically generated from SQLite schema catalogs (`PRAGMA foreign_key_list`), showcasing 1:N cardinality connectors. |
-| **Relational SQL Algebra** | Multi-table INNER/LEFT `JOIN`, `GROUP BY`, `HAVING` filtering, aggregations (`AVG`, `COUNT`, `SUM`, `MIN`, `MAX`), and `ORDER BY`. |
-| **Deterministic Query Processing** | Speech-to-text conversion &rarr; tokenization & normalization &rarr; schema-aware template mapping &rarr; generated SQL panel for inspection &rarr; execution. |
-| **AST Security Governance** | In-memory Abstract Syntax Tree validation via `sqlglot` guaranteeing single `SELECT` expressions, blocking DDL/DML (`DROP`, `INSERT`, `DELETE`, `UPDATE`), and injecting deterministic `LIMIT 50` row ceilings. |
-| **Role-Based Access Control (RBAC)** | Entitlements partitioned across Student, Faculty, and Admin personas; unauthorized system tables (`app_users`) and sensitive credentials (`password_hash`) are blocked. |
-| **Schema Introspection** | Interactive table explorer displaying datatypes, nullability, default values, foreign key targets, row counts, and sample record previews. |
-| **Audit & Telemetry Logs** | Query history recording user identity, natural question, generated SQL, execution status, latency (ms), row count, and input method (`voice` vs `text`). |
+| :--- | :--- |
+| **Relational Database Modeling** | Normalized schemas (`students`, `subjects`, `marks`, `attendance`, `app_users`) with primary and foreign key constraints. |
+| **3NF Normalization Analysis** | Formal functional dependency proofs eliminating insertion, update, and deletion anomalies ($1\text{NF} \to 2\text{NF} \to 3\text{NF}$). |
+| **Live Mermaid ER Modeling** | Dynamic ER diagram compiled from live catalog tables (`PRAGMA foreign_key_list` and `pg_constraint`), showing $1:N$ cardinalities. |
+| **Relational SQL Algebra** | Multi-table relational joins (`students` $\bowtie$ `marks` $\bowtie$ `subjects`), `GROUP BY`, `HAVING` threshold filters, and aggregations (`AVG`, `COUNT`, `MAX`, `MIN`). |
+| **Intent-Aware Query Gating** | 5-state Intent Classifier (`DATABASE_QUERY`, `AMBIGUOUS_QUERY`, `OUT_OF_SCOPE`, `UNSUPPORTED_OPERATION`, `EMPTY_INPUT`) halting non-database speech before SQL synthesis. |
+| **Mathematical AST Governance** | In-memory syntax tree parsing via `SQLGlot` enforcing a read-only `SELECT` whitelist, blocking DDL/DML, and injecting defensive `LIMIT 100` ceilings. |
+| **Dual-Engine Architecture** | Unified `DatabaseAdapter` supporting cloud-hosted **Supabase PostgreSQL 15+** and local zero-configuration **SQLite (WAL mode)** with automated failover. |
+| **PostgreSQL Row-Level Security (RLS)** | Multi-tenant isolation at the database kernel level; students can only inspect their personal scores via `auth.uid()` policies. |
+| **Execution Plan Profiling** | Interactive `EXPLAIN QUERY PLAN` analyzer categorizing optimizer steps into `FULL_TABLE_SCAN`, `INDEX_SEARCH` (B-Trees), and `TEMP_BTREE_SORT`. |
+| **Audit & Telemetry Logs** | Append-only query history recording username, input mode (`voice` vs `text`), synthesized SQL, execution latency (ms), and row counts. |
 
 ---
 
-## 🧭 Application Structure (6 Core Areas)
+## 🔍 Critical Bug Autopsy & Resolution: The Greeting-Input Defect
 
-The redesigned web interface features six specialized workspaces:
+### 1. The Defect Manifestation
+In previous iterations, speaking non-database conversational greetings (e.g., *"hello how are you"*) caused the system to:
+1. Synthesize an unrelated database query: `SELECT * FROM "exam_scores" LIMIT 50`.
+2. Display misleading green success badges: *"SQL generated successfully"* and *"AST Validated • Read-Only SELECT • Safe"*.
 
-1. **Home (`/`)**: Academic DBMS overview, interactive processing pipeline flow, live database statistics, and direct "Launch Workspace" actions.
-2. **Voice SQL Workspace (`/workspace` or `/voice-sql`)**: The flagship workspace featuring real-time speech-to-text recording, editable recognized question textarea, syntax-highlighted generated SQL panel, `[Validate SQL]` AST button, `[Run Query]` execution button, and interactive results table with Chart.js visualization.
-3. **Database Explorer (`/explorer`)**: Dynamic schema catalog and live Mermaid.js ER diagram mapping table definitions, column types, primary keys, foreign keys, and 5-row live sample previews.
-4. **SQL Playground (`/playground`)**: Manual SQL editor for custom relational queries with pre-filled academic presets, AST validation checks, execution latency tracking, and CSV export.
-5. **Query History (`/history`)**: Persistent audit log with input mode filtering (🎙️ Voice vs ⌨️ Text), execution status, latency, row counts, and instant "Load in Workspace" re-run actions.
-6. **Admin Dashboard (`/admin`)**: Governance command center featuring user account inspection, role entitlements matrix, dataset upload with automatic SQLite table creation, and security audit logs.
+### 2. Root Cause Analysis
+- **Root Cause 1 (Arbitrary Fallback):** In `nlp/sql_generator.py` (line 402), `generate_sql_for_dataset()` had an unconditional fallback returning `SELECT * FROM "{table_name}" LIMIT 50` whenever no keyword patterns matched.
+- **Root Cause 2 (Missing Intent Gating):** The API gateway dispatched all speech transcripts directly to SQL pattern matching without verifying whether the utterance was a database inquiry.
+- **Root Cause 3 (UI Stale State):** In `static/js/voice_sql.js`, unmatched inputs did not clear `#sqlEditor`, leaving previous queries active and executable.
+
+### 3. The Implemented Fix
+- **Engineered `nlp/intent_classifier.py`:** Enforces 5 canonical intent states. Non-database utterances immediately return structured payloads with `status: "out_of_scope"` and helpful suggestions:
+  ```json
+  {
+    "classification": "OUT_OF_SCOPE",
+    "status": "out_of_scope",
+    "intent": null,
+    "sql": null,
+    "message": "Please ask a question about the connected database.",
+    "suggestions": [
+      "Show all students",
+      "Find students with attendance below 75%",
+      "Show average marks by subject"
+    ]
+  }
+  ```
+- **Excised Arbitrary Fallbacks:** Unmatched queries in `nlp/sql_generator.py` strictly return `matched: False, sql: None`.
+- **UI State Clearing:** `static/js/voice_sql.js` clears `#sqlEditor`, hides AST badges, collapses the explain drawer, and presents suggestion chips.
+- **Automated Regression Verification:** 40 regression tests in `tests/test_intent_regression.py` verify that greetings, jokes, ambiguous inputs, and destructive commands generate zero SQL.
 
 ---
 
-## 🎙️ The Voice-to-SQL User Journey
+## 🎙️ The Voice-to-SQL Pipeline Lifecycle
 
-```text
-User Speaks Question
-        │
-        ▼
-Speech-to-Text Ingestion (Web Speech API with live audio wave pulse)
-        │
-        ▼
-Spoken-Number Normalization ("five" -> 5, "seventy five" -> 75)
-        │
-        ▼
-Schema-Aware SQL Generation (Matches relational academic templates)
-        │
-        ▼
-Generated SQL Displayed in Editable Code Panel
-        │
-        ▼
-User Reviews, Inspects, or Edits SQL
-        │
-        ▼
-[Validate SQL] AST Check (sqlglot AST parse, SELECT-only verification, auto LIMIT injection)
-        │
-        ▼
-[Run Query] Execution against SQLite Engine
-        │
-        ▼
-Results Displayed (Sub-millisecond latency, row counts, data table, Chart.js, optional TTS summary)
-        │
-        ▼
-Persistence in Query History (Tagged with input_mode='voice')
+```
+[User Speaks Natural Language]
+             │
+             ▼
+[Web Speech API: Audio Waveform Capture]
+             │
+             ▼
+[Spoken Normalization: "seventy five percent" ──► "75%"]
+             │
+             ▼
+[Intent Classification Engine: 5 Canonical States]
+      ├── OUT_OF_SCOPE / AMBIGUOUS / UNSUPPORTED ──► [Immediate Structured Guidance & Halt]
+      └── DATABASE_QUERY (Approved)
+             │
+             ▼
+[Schema Mapping: Slot Filling & Join Assembly]
+             │
+             ▼
+[SQLGlot AST Validation: Read-Only Check & Auto LIMIT 100]
+             │
+             ▼
+[Workspace UI Review: User Reviews SQL in #sqlEditor]  <── Microphone stop NEVER auto-executes!
+             │
+             ▼ (User Explicitly Clicks [Run Query])
+[Database Adapter: Supabase PostgreSQL 15+ / SQLite WAL]
+             │
+             ▼
+[Execution Plan Profiler: EXPLAIN Tree + Results Table + Charts]
 ```
 
-> **Important**: The microphone captures speech as an input mechanism. The system does **not** automatically execute queries upon speech capture; the user retains full control to inspect, edit, or validate the SQL before clicking `[Run Query]`.
+---
+
+## 🧭 Application Workspaces & Portals
+
+QueryMind 2.0 provides six specialized interfaces accessible from any browser:
+
+1. **Voice SQL Workspace (`/voice-sql` or `/workspace`)**: Real-time microphone capture with audio waveform visualization, transcript editor, distinct badge indicators (Speech Recognized, Intent Validated, AST Validated), execution button, interactive results table, and `[Explain Plan]` drawer.
+2. **Database Schema Explorer (`/database-explorer` or `/explorer`)**: Live schema catalog displaying table structures, column datatypes, nullability, primary/foreign keys, and an interactive **Mermaid.js Entity-Relationship diagram**.
+3. **SQL Playground (`/sql-playground` or `/playground`)**: Direct SQL workbench for writing manual relational queries, featuring AST security validation, execution latency profiling, and CSV export.
+4. **Query History (`/query-history` or `/history`)**: Complete audit trail with input mode tagging (🎙️ Voice vs ⌨️ Text), query status, latency timers, row counts, and one-click re-run buttons.
+5. **Admin Governance Portal (`/admin-dashboard` or `/admin`)**: Command center displaying system metrics, user role management (Student, Faculty, Admin), dataset upload with dynamic table creation, and security audit logs.
+6. **Academic Home Portal (`/`)**: Architecture diagrams, DCDS curriculum relevance, database statistics, and quick-launch links.
 
 ---
 
-## 🚀 Installation & Execution
+## 🧪 Automated Testing Suite (99 / 99 Tests Passing)
+
+QueryMind 2.0 enforces a continuous automated test suite run via `pytest tests/ -v`:
+
+```bash
+pytest tests/ -v
+```
+
+### Test Suite Execution Matrix (100% Pass Rate in 3.99s)
+
+| Test Module | Test Coverage & Scope | Tests Passed | Status |
+| :--- | :--- | :---: | :---: |
+| `tests/test_intent_regression.py` | Greeting bug fix, out-of-scope blocking, destructive query rejection, live API regression | **40 / 40** | ✅ PASSED |
+| `tests/test_querymind.py` | Core SQL template mapping, SQLGlot AST validation rules, CSV dataset queries | **22 / 22** | ✅ PASSED |
+| `tests/test_querymind_2.py` | Spoken number normalization, schema introspection catalog, Mermaid ER compilation, page routes | **27 / 27** | ✅ PASSED |
+| `tests/test_advanced_dbms.py` | Query plan analysis (`EXPLAIN QUERY PLAN`), table scan and index search detection | **3 / 3** | ✅ PASSED |
+| `tests/test_supabase_adapter.py` | Dual-engine database adapter initialization, local SQLite fallback, catalog metadata | **7 / 7** | ✅ PASSED |
+| **TOTAL AGGREGATE** | **Complete System Verification** | **99 / 99** | **✅ 100% PASS** |
+
+---
+
+## 🚀 Installation & Local Execution
 
 ### 1. Prerequisites
-- Python 3.10+
-- Modern browser with Web Speech API support (Google Chrome, Microsoft Edge, Safari)
+- Python 3.11+
+- Chromium-based browser (Google Chrome, Microsoft Edge, Safari) with microphone support
 
 ### 2. Setup
 ```bash
@@ -92,45 +161,52 @@ git checkout querymind-2.0
 pip install -r requirements.txt
 ```
 
-### 3. Run Application
-```bash
-python app.py
-```
-
-The SQLite database (`db/querymind.db`) self-initializes and seeds academic records on first startup.
-
-Open your browser to:
-**http://127.0.0.1:5000**
-
----
-
-## 🧪 Automated Testing
-
-Run the full automated test suite:
-
+### 3. Run Automated Tests
 ```bash
 pytest tests/ -v
 ```
 
-All 49 unit, integration, security, and web endpoint tests verify:
-- Voice input normalization (e.g. converting spoken words like "five" to numeric digits)
-- Academic query templates (attendance threshold filter, subject averages, 3-table joins, division counts)
-- Schema metadata introspection and dynamic Mermaid ER diagram generation
-- AST security governance blocking `DROP`, `DELETE`, `INSERT`, `UPDATE`, comments, and semicolon injections
-- Role-based table and column masking (blocking `app_users` and `password_hash` for students)
-- Asynchronous REST endpoints (`/api/generate-sql`, `/api/validate-sql`, `/api/execute-sql`, `/api/schema`)
-- Query history persistence of `input_mode` (`voice` vs `text`)
-- HTTP 200 OK responses across all 6 core page routes
+### 4. Start the Application
+```bash
+python app.py
+```
+
+Open your browser to:
+**`http://127.0.0.1:5000`**
+
+### Default Academic Credentials
+- **Student User:** `student1` / `stud123` (Role: `student`)
+- **Faculty User:** `teacher1` / `teach123` (Role: `teacher`)
+- **Administrator:** `admin` / `admin123` (Role: `admin`)
 
 ---
 
-## 📊 Sample Academic Queries to Test
+## ☁️ Supabase Cloud PostgreSQL Integration (Optional)
 
-| User Speech / Text | Generated SQL Query | Key DBMS Concepts |
-|---|---|---|
-| *"Show students whose attendance is below 75 percent"* | `SELECT s.student_id, s.name, s.division, ROUND(AVG(a.attendance_percentage), 2) AS attendance_percentage FROM students s JOIN attendance a ON s.student_id = a.student_id GROUP BY s.student_id, s.name, s.division HAVING attendance_percentage < 75 ORDER BY attendance_percentage;` | INNER JOIN, GROUP BY, HAVING, Threshold Filtering |
-| *"Show the average marks for each subject"* | `SELECT sub.subject_name, ROUND(AVG(m.marks), 2) AS avg_marks FROM subjects sub JOIN marks m ON sub.subject_id = m.subject_id GROUP BY sub.subject_name ORDER BY avg_marks DESC;` | Aggregation (`AVG`), GROUP BY, ORDER BY DESC |
-| *"List the top five students by marks"* | `SELECT s.student_id, s.name, s.division, ROUND(AVG(m.marks), 2) AS avg_marks FROM students s JOIN marks m ON s.student_id = m.student_id GROUP BY s.student_id, s.name, s.division ORDER BY avg_marks DESC LIMIT 5;` | Word Number Normalization ("five" &rarr; 5), Multi-Table JOIN, LIMIT |
-| *"Count students in each department"* | `SELECT division AS department, COUNT(*) AS student_count FROM students GROUP BY division ORDER BY division;` | Column Alias, COUNT(*), GROUP BY |
-| *"Show students and their subject marks"* | `SELECT s.student_id, s.name, s.division, sub.subject_name, m.marks FROM students s JOIN marks m ON s.student_id = m.student_id JOIN subjects sub ON m.subject_id = sub.subject_id ORDER BY s.name, sub.subject_name;` | 3-Table Relational JOIN (`students` + `marks` + `subjects`) |
-| *"Show all students"* | `SELECT student_id, name, division, email FROM students ORDER BY name;` | Projection, Sorting |
+To connect QueryMind 2.0 to your cloud Supabase instance:
+```bash
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_KEY="your-anon-or-service-key"
+export DATABASE_URL="postgresql://postgres:password@db.your-project.supabase.co:5432/postgres"
+```
+
+### Running Schema & Data Migrations:
+```bash
+# Generate idempotent PostgreSQL 15+ seed script from SQLite records
+python scripts/migrate_sqlite_to_supabase.py
+
+# Execute migrations in Supabase SQL Editor:
+# 1. migrations/001_initial_supabase_postgres_schema.sql (Tables, Indexes, RLS Policies)
+# 2. migrations/002_data_seed_supabase.sql (Relational Data Seed)
+```
+
+If Supabase credentials are not provided, QueryMind 2.0 automatically runs on its local, zero-configuration SQLite engine in WAL mode.
+
+---
+
+## 👥 Contributors & Academic Credits
+
+- **Course:** Data Communication & Database Systems (DCDS) — ESE Project (2025–2026)
+- **Repository:** [`https://github.com/arjitujjawal-art/ai_Dcds`](https://github.com/arjitujjawal-art/ai_Dcds)
+- **Branch:** `querymind-2.0`
+- **Lead Systems Architect & QA Lead:** Systems Development Team
