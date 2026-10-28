@@ -2963,6 +2963,34 @@ input, textarea, select {
   color: var(--accent-primary);
 }
 
+.er-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-refresh-er {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-refresh-er:hover {
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+  background: var(--surface-hover);
+}
+
 .mermaid-diagram-box {
   background: #FFFFFF;
   border: 1px solid var(--border-subtle);
@@ -2970,10 +2998,62 @@ input, textarea, select {
   padding: 24px;
   overflow-x: auto;
   text-align: center;
-  min-height: 420px;
+  min-height: 440px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.er-diagram-svg-target {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.er-diagram-svg-target svg {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.er-diagram-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 40px 0;
+}
+
+.er-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: erSpin 0.8s linear infinite;
+}
+
+@keyframes erSpin {
+  to { transform: rotate(360deg); }
+}
+
+.er-render-fallback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.er-render-fallback .fallback-icon {
+  font-size: 24px;
 }
 
 .er-raw-details {

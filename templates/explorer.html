@@ -190,19 +190,29 @@
           <h2 class="card-main-title">Entity-Relationship (ER) Architecture</h2>
           <p class="card-sub-title">Dynamically constructed from SQLite schema catalogs and foreign-key constraints.</p>
         </div>
-        <div class="er-legend">
-          <span class="legend-item"><span class="badge-pk">PK</span> Primary Key</span>
-          <span class="legend-item"><span class="badge-fk">FK</span> Foreign Key</span>
-          <span class="legend-item"><span class="legend-connector">||--o{</span> 1-to-Many Relationship</span>
+        <div class="er-header-actions">
+          <div class="er-legend">
+            <span class="legend-item"><span class="badge-pk">PK</span> Primary Key</span>
+            <span class="legend-item"><span class="badge-fk">FK</span> Foreign Key</span>
+            <span class="legend-item"><span class="legend-connector">||--o{</span> 1-to-Many Relationship</span>
+          </div>
+          <button type="button" class="btn-refresh-er" onclick="renderErDiagram(true)">
+            <span>🔄</span> Re-render Diagram
+          </button>
         </div>
       </div>
 
       <!-- Mermaid ER Diagram Canvas -->
-      <div class="mermaid-diagram-box mt-4">
-        <div class="mermaid" id="erMermaidDiagram">
-{{ schema_meta.er_mermaid }}
+      <div class="mermaid-diagram-box mt-4" id="erCanvasBox">
+        <div id="erMermaidLoading" class="er-diagram-loading">
+          <div class="er-spinner"></div>
+          <span>Rendering live Relational ER Diagram...</span>
         </div>
+        <div id="erMermaidDiagram" class="er-diagram-svg-target"></div>
       </div>
+
+      <!-- Raw Mermaid Schema Definition (Source) -->
+      <pre id="rawMermaidSource" style="display: none;">{{ schema_meta.er_mermaid }}</pre>
 
       <!-- Raw Mermaid Schema Definition Collapsible -->
       <details class="er-raw-details mt-4">
@@ -214,33 +224,101 @@
 
 </div>
 
-<!-- Mermaid.js for interactive rendering -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<!-- Local Mermaid.js with CDN fallback for 100% offline & fast rendering -->
+<script src="{{ url_for('static', filename='js/mermaid.min.js') }}"></script>
 <script>
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: 'neutral',
-    er: {
-      useMaxWidth: true,
-      layoutDirection: 'TB'
+  if (typeof mermaid === 'undefined') {
+    const cdnScript = document.createElement('script');
+    cdnScript.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+    document.head.appendChild(cdnScript);
+  }
+
+  let erDiagramRendered = false;
+
+  async function renderErDiagram(force = false) {
+    if (erDiagramRendered && !force) return;
+    
+    const container = document.getElementById('erMermaidDiagram');
+    const loadingEl = document.getElementById('erMermaidLoading');
+    const sourceEl = document.getElementById('rawMermaidSource');
+    if (!container || !sourceEl) return;
+
+    const rawCode = sourceEl.textContent.trim();
+    if (!rawCode) {
+      if (loadingEl) loadingEl.style.display = 'none';
+      container.innerHTML = '<p class="text-muted">No ER diagram schema available.</p>';
+      return;
     }
-  });
+
+    if (loadingEl) loadingEl.style.display = 'flex';
+    container.style.display = 'none';
+
+    try {
+      if (typeof mermaid === 'undefined') {
+        // Wait a small moment if CDN is still loading
+        await new Promise(r => setTimeout(r, 200));
+        if (typeof mermaid === 'undefined') {
+          throw new Error('Mermaid library not loaded');
+        }
+      }
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'loose',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        er: {
+          useMaxWidth: true,
+          layoutDirection: 'TB',
+          minEntityWidth: 120,
+          minEntityHeight: 80,
+          entityPadding: 16
+        }
+      });
+
+      // Clear previous container content
+      container.innerHTML = '';
+      
+      const renderId = 'erSvg_' + Math.random().toString(36).substring(2, 9);
+      const { svg } = await mermaid.render(renderId, rawCode);
+      
+      container.innerHTML = svg;
+      const svgElement = container.querySelector('svg');
+      if (svgElement) {
+        svgElement.style.maxWidth = '100%';
+        svgElement.style.width = '100%';
+        svgElement.style.height = 'auto';
+        svgElement.style.minHeight = '380px';
+      }
+
+      erDiagramRendered = true;
+    } catch (err) {
+      console.error('ER diagram render error:', err);
+      container.innerHTML = `
+        <div class="er-render-fallback">
+          <div class="fallback-icon">⚠️</div>
+          <div class="fallback-text">
+            <strong>Mermaid Rendering Notice</strong>
+            <p>${err.message || 'Unable to render vector graph.'}</p>
+          </div>
+        </div>`;
+    } finally {
+      if (loadingEl) loadingEl.style.display = 'none';
+      container.style.display = 'flex';
+    }
+  }
 
   function selectTable(tableName) {
-    // Hide all panels
     document.querySelectorAll('.table-detail-panel').forEach(panel => {
       panel.classList.add('hidden');
     });
-    // Deselect all rail buttons
     document.querySelectorAll('.table-nav-item').forEach(btn => {
       btn.classList.remove('active');
     });
 
-    // Show target panel
     const targetPanel = document.getElementById(`panel-${tableName}`);
     if (targetPanel) targetPanel.classList.remove('hidden');
 
-    // Activate rail button
     const targetBtn = document.getElementById(`btn-tbl-${tableName}`);
     if (targetBtn) targetBtn.classList.add('active');
   }
@@ -256,6 +334,11 @@
       tabSchemaBtn.classList.remove('active');
       erView.classList.remove('hidden');
       schemaView.classList.add('hidden');
+
+      // Crucial: Wait for container to become visible so DOM has non-zero layout geometry
+      setTimeout(() => {
+        renderErDiagram();
+      }, 50);
     } else {
       tabSchemaBtn.classList.add('active');
       tabErBtn.classList.remove('active');
@@ -263,5 +346,13 @@
       erView.classList.add('hidden');
     }
   }
+
+  // Handle direct tab access from URL hash or query params
+  document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'er' || window.location.hash === '#er') {
+      switchExplorerTab('er');
+    }
+  });
 </script>
 {% endblock %}

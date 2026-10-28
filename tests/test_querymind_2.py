@@ -224,6 +224,8 @@ class TestCorePageRoutes:
         assert b"Database Explorer" in res.data
         assert b"students" in res.data
         assert b"erDiagram" in res.data
+        assert b"mermaid.min.js" in res.data
+        assert b"erMermaidDiagram" in res.data
 
     def test_sql_playground_returns_200(self, client):
         res = client.get("/playground")
